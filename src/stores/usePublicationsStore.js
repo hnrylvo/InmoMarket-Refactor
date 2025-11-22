@@ -8,6 +8,18 @@ export const usePublicationsStore = create((set, get) => ({
     loading: false,
     error: null,
     filteredResults: null,
+    lastFetchTime: null,
+
+    // Get only active publications (if API doesn't filter them)
+    getActivePublications: () => {
+        const { publications } = get();
+        // Filter out inactive publications if they have an 'active' or 'status' field
+        // This assumes the API returns all active publications, but we add this as a safety measure
+        return publications.filter(pub => {
+            // If publication has an active field, use it; otherwise assume it's active
+            return pub.active !== false && pub.status !== 'inactive';
+        });
+    },
 
     checkFavoriteStatus: async (token, publicationId) => {
         try {
@@ -70,7 +82,9 @@ export const usePublicationsStore = create((set, get) => ({
             set({ 
                 publications: transformedPublications,
                 filteredResults: transformedPublications,
-                loading: false 
+                loading: false,
+                lastFetchTime: Date.now(),
+                error: null
             });
         } catch (error) {
             const isUnauthorized = error.response?.status === 401;
@@ -80,7 +94,8 @@ export const usePublicationsStore = create((set, get) => ({
 
             set({ 
                 error: error.response?.data?.message || 'Error al cargar las publicaciones', 
-                loading: false 
+                loading: false,
+                lastFetchTime: null
             });
         }
     },
@@ -236,5 +251,16 @@ export const usePublicationsStore = create((set, get) => ({
             console.error('Error reporting publication:', error);
             throw error;
         }
+    },
+
+    // Refresh publications (useful for manual refresh)
+    refreshPublications: async (token) => {
+        set({ lastFetchTime: null });
+        return get().fetchPublications(token);
+    },
+
+    // Clear filtered results to show all publications
+    clearFilters: () => {
+        set({ filteredResults: null });
     }
 })); 
