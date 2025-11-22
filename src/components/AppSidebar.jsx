@@ -134,6 +134,14 @@ export function AppSidebar({ props }) {
           <SidebarGroup className="group-data-[collapsible=icon]:hidden">
             <SidebarGroupLabel>Administración</SidebarGroupLabel>
             <SidebarMenu>
+              <SidebarMenuItem key="Publicaciones">
+                <SidebarMenuButton asChild isActive={isRouteActive('/admin/publications')}>
+                  <Link to="/admin/publications" onClick={handleMobileNavigation}>
+                    <Building2 />
+                    <span>Publicaciones</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem key="Reportes">
                 <SidebarMenuButton asChild isActive={isRouteActive('/reportes')}>
                   <Link to="/reportes" onClick={handleMobileNavigation}>

@@ -16,6 +16,7 @@ import CreatePublication from './pages/publications/CreatePublication'
 import Reports from './pages/Reports'
 import Visits from './pages/Visits'
 import UserProfile from './pages/Settings/UserProfile'
+import AdminPublications from './pages/AdminPublications'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AdminRoute } from './components/AdminRoute'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -59,6 +60,14 @@ export default function App() {
             element={
               <AdminRoute>
                 <Reports />
+              </AdminRoute>
+            } 
+          />
+          <Route 
+            path="/admin/publications" 
+            element={
+              <AdminRoute>
+                <AdminPublications />
               </AdminRoute>
             } 
           />
