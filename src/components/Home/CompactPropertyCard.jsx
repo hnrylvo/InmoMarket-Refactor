@@ -12,6 +12,7 @@ export default function CompactPropertyCard({
                                               bedrooms = 3,
                                               bathrooms = 2,
                                               publisherName = "Jane Cooper",
+                                              publisherId = null,
                                               isNew = false,
                                             }) {
   return (
@@ -61,9 +62,19 @@ export default function CompactPropertyCard({
                   <span className="font-medium">{bathrooms}</span>
                 </div>
               </div>
-              <div className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-full">
-                {publisherName}
-              </div>
+              {publisherId ? (
+                <Link 
+                  to={`/user/${publisherId}`}
+                  className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-full hover:text-primary transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {publisherName}
+                </Link>
+              ) : (
+                <div className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-full">
+                  {publisherName}
+                </div>
+              )}
             </div>
           </CardContent>
         </div>

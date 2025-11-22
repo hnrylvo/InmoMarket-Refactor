@@ -446,7 +446,19 @@ export default function PropertyClientView() {
             </div>
 
             <p className="text-gray-700 dark:text-gray-200">{property.description || 'Sin descripción disponible'}</p>
-            <p className="text-sm text-muted-foreground">Publicado por {property.publisherName || 'Anónimo'}</p>
+            <p className="text-sm text-muted-foreground">
+              Publicado por{' '}
+              {property.publisherId ? (
+                <Link 
+                  to={`/user/${property.publisherId}`}
+                  className="text-primary hover:underline font-medium"
+                >
+                  {property.publisherName || 'Anónimo'}
+                </Link>
+              ) : (
+                <span>{property.publisherName || 'Anónimo'}</span>
+              )}
+            </p>
           </div>
         </div>
 

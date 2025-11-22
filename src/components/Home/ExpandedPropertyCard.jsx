@@ -16,6 +16,7 @@ export default function ExpandedPropertyCard(props) {
     floors = 1,
     parking = 1,
     publisherName = "Jane Cooper",
+    publisherId = null,
     isNew = false,
     favorited = false,
     onFavoriteChange,
@@ -103,7 +104,17 @@ export default function ExpandedPropertyCard(props) {
               <span className="font-medium text-gray-900 dark:text-white">{parking}</span>
             </div>
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-300 font-medium">{publisherName}</div>
+          {publisherId ? (
+            <Link 
+              to={`/user/${publisherId}`}
+              className="text-sm text-gray-600 dark:text-gray-300 font-medium hover:text-primary transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {publisherName}
+            </Link>
+          ) : (
+            <div className="text-sm text-gray-600 dark:text-gray-300 font-medium">{publisherName}</div>
+          )}
         </div>
       </div>
     </Card>
