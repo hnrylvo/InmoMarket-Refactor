@@ -43,6 +43,7 @@ export const useHomeListingsStore = create((set, get) => ({
           bedrooms: property.propertyBedrooms,
           floors: property.propertyFloors,
           publisherName: property.userName,
+          publisherId: property.userId || property.ownerId || null, // ID del vendedor para ver su perfil
           isNew: isNewListing,
           favorited: false,
           description: property.propertyDescription,

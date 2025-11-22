@@ -15,6 +15,7 @@ import MyPublications from './pages/publications/MyPublications'
 import CreatePublication from './pages/publications/CreatePublication'
 import Reports from './pages/Reports'
 import Visits from './pages/Visits'
+import UserProfile from './pages/UserProfile'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AdminRoute } from './components/AdminRoute'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/publications" element={<PublicationsList />} />
           <Route path="/property/:id/:slug?" element={<PropertyRoute />} />
+          <Route path="/user/:userId" element={<UserProfile />} />
         </Route>
 
         
