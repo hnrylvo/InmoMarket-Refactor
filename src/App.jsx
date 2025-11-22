@@ -16,6 +16,7 @@ import CreatePublication from './pages/publications/CreatePublication'
 import Reports from './pages/Reports'
 import Visits from './pages/Visits'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { AdminRoute } from './components/AdminRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 
 export default function App() {
@@ -48,8 +49,17 @@ export default function App() {
           <Route path="/notifications" element={<NotificationsList />} />
           <Route path="/my-publications" element={<MyPublications />} />
           <Route path="/my-publications/create" element={<CreatePublication />} />
-          <Route path="/reportes" element={<Reports />} />
           <Route path="/visits" element={<Visits />} />
+          
+          {/* Admin Routes - Solo accesible para administradores */}
+          <Route 
+            path="/reportes" 
+            element={
+              <AdminRoute>
+                <Reports />
+              </AdminRoute>
+            } 
+          />
       </Routes>
     </ErrorBoundary>
   )
