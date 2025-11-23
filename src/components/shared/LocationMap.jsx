@@ -17,6 +17,7 @@ const DEFAULT_ZOOM = 8
 const LocationMarker = ({ position, onPositionChange }) => {
     const map = useMapEvents({
         click(e) {
+            console.log('LocationMarker - Map clicked:', e.latlng)
             onPositionChange(e.latlng)
         },
     })
@@ -27,6 +28,7 @@ const LocationMarker = ({ position, onPositionChange }) => {
             draggable={true}
             eventHandlers={{
                 dragend: (e) => {
+                    console.log('LocationMarker - Marker dragged:', e.target.getLatLng())
                     onPositionChange(e.target.getLatLng())
                 },
             }}
@@ -34,26 +36,40 @@ const LocationMarker = ({ position, onPositionChange }) => {
     ) : null
 }
 
-export default function LocationMap({ onLocationChange, initialPosition }) {
+export default function LocationMap({ onLocationChange, initialPosition, initialAddress }) {
     const [position, setPosition] = useState(initialPosition || null)
     const [address, setAddress] = useState({
-        municipality: '',
-        department: '',
+        municipality: initialAddress?.municipality || '',
+        department: initialAddress?.department || '',
     })
     const [isLoading, setIsLoading] = useState(false)
 
-    useEffect(() => {
-        if (position) {
-            fetchAddress(position)
-        }
-    }, [position])
-
     const fetchAddress = async (latlng) => {
+        if (!latlng) return
+        
         setIsLoading(true)
         try {
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&zoom=18&addressdetails=1`
-            )
+            // Use Vite proxy in development, or direct call in production
+            const isDevelopment = import.meta.env.DEV
+            const baseUrl = isDevelopment 
+                ? '/api/nominatim' 
+                : 'https://nominatim.openstreetmap.org'
+            
+            const url = `${baseUrl}/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&zoom=18&addressdetails=1`
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: isDevelopment ? {} : {
+                    'User-Agent': 'InmoMarket-Refactor/1.0',
+                    'Accept': 'application/json',
+                    'Accept-Language': 'es,en'
+                }
+            })
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`)
+            }
+            
             const data = await response.json()
             
             if (data.address) {
@@ -76,14 +92,36 @@ export default function LocationMap({ onLocationChange, initialPosition }) {
     }
 
     const handlePositionChange = (newPosition) => {
+        if (!newPosition) return
+        console.log('LocationMap - Position changed:', newPosition)
         setPosition(newPosition)
+        // Always fetch address when user changes position
+        fetchAddress(newPosition)
     }
+
+    // Initialize position and address on mount
+    useEffect(() => {
+        if (initialPosition) {
+            setPosition(initialPosition)
+            // If we have initial address, use it; otherwise fetch from coordinates
+            if (initialAddress?.municipality && initialAddress?.department) {
+                // Address already provided, no need to fetch
+                setAddress({
+                    municipality: initialAddress.municipality,
+                    department: initialAddress.department
+                })
+            } else {
+                // Fetch address from coordinates
+                fetchAddress(initialPosition)
+            }
+        }
+    }, []) // Only run once on mount
 
     return (
         <div className="space-y-4">
             <div className="h-[400px] w-full rounded-lg overflow-hidden border">
                 <MapContainer
-                    center={position || DEFAULT_CENTER}
+                    center={position ? [position.lat, position.lng] : DEFAULT_CENTER}
                     zoom={DEFAULT_ZOOM}
                     style={{ height: '100%', width: '100%' }}
                 >

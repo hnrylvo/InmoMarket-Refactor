@@ -13,6 +13,7 @@ import { PropertyRoute } from './components/PropertyRoute'
 import { Toaster } from "@/components/ui/sonner"
 import MyPublications from './pages/publications/MyPublications'
 import CreatePublication from './pages/publications/CreatePublication'
+import EditPublication from './pages/publications/EditPublication'
 import Reports from './pages/Reports'
 import Visits from './pages/Visits'
 import UserProfile from './pages/Settings/UserProfile'
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="/notifications" element={<NotificationsList />} />
           <Route path="/my-publications" element={<MyPublications />} />
           <Route path="/my-publications/create" element={<CreatePublication />} />
+          <Route path="/my-publications/edit/:id" element={<EditPublication />} />
           <Route path="/visits" element={<Visits />} />
           
           {/* Admin Routes - Solo accesible para administradores */}

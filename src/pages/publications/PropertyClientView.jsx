@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Bath, BedDouble, CalendarDays, Users, ChevronDown, ChevronUp, Calendar, Home } from "lucide-react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { Bath, BedDouble, CalendarDays, Users, ChevronDown, ChevronUp, Calendar, Home, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -16,7 +16,7 @@ import { VisitSchedulingDialog } from "@/components/VisitSchedulingDialog";
 export default function PropertyClientView() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { publications, loading, error, fetchPublications } = usePublicationsStore();
+  const { publications, loading, error, fetchPublications, fetchPublicationById } = usePublicationsStore();
   const { token, userId } = useAuthStore();
   const { toggleFavorite, fetchFavorites } = useFavoritesStore();
   const [isFavorited, setIsFavorited] = useState(false);
@@ -25,8 +25,8 @@ export default function PropertyClientView() {
   const property = publications.find(p => p.id === id);
   const isOwnPublication = userId && property?.publisherId && userId === property.publisherId;
 
-  // Generate slug for breadcrumbs
-  const slug = property?.title
+  // Generate slug for breadcrumbs - use propertyTitle, not title (title may include typeName)
+  const slug = (property?.propertyTitle || property?.title)
     ?.toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
@@ -38,8 +38,9 @@ export default function PropertyClientView() {
       if (window.location.pathname !== `/property/${id}/${slug}`) {
         window.history.replaceState({}, '', `/property/${id}/${slug}`);
       }
-      // Update the document title
-      document.title = property.title;
+      // Update the document title - use propertyTitle first, then fall back to title
+      const titleForDocument = property.propertyTitle || property.title || 'Propiedad';
+      document.title = titleForDocument;
     }
   }, [property, id, slug]);
 
@@ -105,19 +106,33 @@ export default function PropertyClientView() {
 
   useEffect(() => {
     const loadData = async () => {
-      if (publications.length === 0) {
+      // Check if we have the property in the store
+      const foundProperty = publications.find(p => p.id === id);
+      
+      // If property not found, try to fetch it individually or fetch all
+      if (!foundProperty) {
         try {
-          await fetchPublications(token);
+          if (token) {
+            // Try to fetch the specific publication first (more efficient)
+            await fetchPublicationById(id, token);
+          } else {
+            // If no token, fetch all publications
+            await fetchPublications(token);
+          }
         } catch (error) {
-          console.error('Error loading publications:', error);
-          toast.error("Error al cargar las publicaciones");
+          console.error('Error loading publication:', error);
+          toast.error("Error al cargar la publicación");
         }
       }
       setIsLoading(false);
     };
 
-    loadData();
-  }, [publications.length, token, fetchPublications]);
+    if (id) {
+      loadData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [id, token]);
 
   // Remove unnecessary state and effects
   const [contactExpanded, setContactExpanded] = useState(false);
@@ -416,8 +431,26 @@ export default function PropertyClientView() {
           {/* Property Details */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{property.title || 'Tipo no especificado'}</h1>
-              <span className="text-sm text-muted-foreground">{property.furnished ? 'Amueblado' : 'Sin amueblar'}</span>
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{property.propertyTitle || property.title || 'Sin título'}</h1>
+                {property.typeName && (
+                  <p className="text-lg text-muted-foreground mt-1">{property.typeName}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {isOwnPublication && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/my-publications/edit/${property.id}`)}
+                    className="flex items-center gap-2"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Editar
+                  </Button>
+                )}
+                <span className="text-sm text-muted-foreground">{property.furnished ? 'Amueblado' : 'Sin amueblar'}</span>
+              </div>
             </div>
             <p className="text-2xl font-bold text-primary">{property.price || 'Precio no disponible'}</p>
             
