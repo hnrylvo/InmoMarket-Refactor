@@ -4,6 +4,7 @@ import { FavoriteButton } from "@/components/ui/favoriteButton";
 import { Link } from "react-router-dom";
 import { ReportDialog } from "@/components/ReportDialog";
 import { Card } from "@/components/ui/card";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function ExpandedPropertyCard(props) {
   const {
@@ -23,6 +24,9 @@ export default function ExpandedPropertyCard(props) {
     isPending = false,
   } = props;
 
+  const { userId } = useAuthStore();
+  const isOwnPublication = userId && publisherId && userId === publisherId;
+
   const slug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -31,10 +35,26 @@ export default function ExpandedPropertyCard(props) {
   const handleButtonClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Prevent favorite toggle if it's own publication
+    if (isOwnPublication) {
+      return;
+    }
+  };
+
+  const handleFavoriteChange = (newState) => {
+    // Prevent favorite toggle if it's own publication
+    if (isOwnPublication) {
+      return;
+    }
+    
+    if (onFavoriteChange) {
+      onFavoriteChange(newState);
+    }
   };
 
   return (
-    <Card className="group overflow-hidden hover:shadow-sm transition-all duration-300 hover:scale-[1.02]">
+    <Card className="group overflow-hidden hover:shadow-sm transition-all duration-300 hover:scale-[1.02] h-full flex flex-col">
       <div className="relative">
         <Link to={`/property/${id}`} className="block">
           <div className="relative aspect-[3/2] overflow-hidden">
@@ -61,9 +81,10 @@ export default function ExpandedPropertyCard(props) {
           onClick={handleButtonClick}
         >
           <FavoriteButton
-            isFavorited={favorited}
-            onFavoriteChange={onFavoriteChange}
+            isFavorited={isOwnPublication ? false : favorited}
+            onFavoriteChange={handleFavoriteChange}
             isPending={isPending}
+            disabled={isOwnPublication}
           />
         </div>
 
@@ -84,7 +105,7 @@ export default function ExpandedPropertyCard(props) {
           <span className="line-clamp-1">{location}</span>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700 mt-auto">
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-1.5">
               <BedDouble className="h-4 w-4 text-gray-500 dark:text-gray-300" />

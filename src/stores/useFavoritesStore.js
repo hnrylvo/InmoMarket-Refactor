@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import axios from 'axios';
+import { useAuthStore } from './useAuthStore';
 
 export const useFavoritesStore = create((set, get) => ({
   favorites: [],
@@ -11,6 +12,15 @@ export const useFavoritesStore = create((set, get) => ({
   pendingToggles: new Set(),
 
   fetchFavorites: async (token, page = 0) => {
+    // Validate token before proceeding
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      set({ 
+        error: 'No hay token de autenticación. Por favor, inicia sesión nuevamente.',
+        loading: false 
+      });
+      return;
+    }
+
     try {
       set({ loading: true, error: null });
       const response = await axios.get(
@@ -58,8 +68,36 @@ export const useFavoritesStore = create((set, get) => ({
         totalElements: response.data.totalElements
       });
     } catch (error) {
+      let errorMessage = 'Error al cargar favoritos';
+      
+      if (error.response) {
+        const status = error.response.status;
+        if (status === 401) {
+          // Session expired - logout user
+          if (token) {
+            useAuthStore.getState().logout();
+          }
+          errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+        } else if (status === 403) {
+          errorMessage = 'No tienes permiso para acceder a esta información.';
+        } else {
+          errorMessage = error.response.data?.message || `Error del servidor (${status})`;
+        }
+      } else if (error.request) {
+        errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
+      } else {
+        errorMessage = error.message || 'Error al procesar la solicitud';
+      }
+      
+      console.error('Error fetching favorites:', {
+        error,
+        response: error.response,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      
       set({ 
-        error: error.response?.data?.message || 'Error al cargar favoritos',
+        error: errorMessage,
         loading: false 
       });
     }
@@ -67,6 +105,14 @@ export const useFavoritesStore = create((set, get) => ({
 
 
   toggleFavoriteOptimistic: async (token, publicationId) => {
+    // Validate token before proceeding
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      return { 
+        success: false, 
+        error: 'No hay token de autenticación. Por favor, inicia sesión nuevamente.' 
+      };
+    }
+
     const { favorites, pendingToggles } = get();
     
     if (pendingToggles.has(publicationId)) {
@@ -102,16 +148,94 @@ export const useFavoritesStore = create((set, get) => ({
     });
 
     try {
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/favorites/toggle`;
+      const requestBody = { publicationId };
+      
+      console.log('Toggle favorite optimistic request:', {
+        url: apiUrl,
+        publicationId,
+        tokenLength: token.length,
+        tokenPrefix: token.substring(0, 20) + '...'
+      });
+      
       const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/favorites/toggle`,
-        { publicationId },
+        apiUrl,
+        requestBody,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          validateStatus: (status) => status < 500 // Don't throw for 4xx errors
         }
       );
+      
+      console.log('Toggle favorite optimistic response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
+      });
+      
+      // Check if response indicates an error
+      if (response.status === 401) {
+        // Session expired - logout user
+        if (token) {
+          useAuthStore.getState().logout();
+        }
+        // Revert optimistic update
+        set({
+          favorites: originalFavorites,
+          totalElements: get().totalElements + 1,
+          totalPages: Math.ceil((get().totalElements + 1) / itemsPerPage),
+          pendingToggles: new Set([...get().pendingToggles].filter(id => id !== publicationId))
+        });
+        return { 
+          success: false, 
+          error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.' 
+        };
+      }
+      
+      if (response.status === 403) {
+        // Revert optimistic update
+        set({
+          favorites: originalFavorites,
+          totalElements: get().totalElements + 1,
+          totalPages: Math.ceil((get().totalElements + 1) / itemsPerPage),
+          pendingToggles: new Set([...get().pendingToggles].filter(id => id !== publicationId))
+        });
+        return { 
+          success: false, 
+          error: 'No tienes permiso para realizar esta acción. Por favor, verifica tu sesión.' 
+        };
+      }
+      
+      if (response.status === 404) {
+        // Revert optimistic update
+        set({
+          favorites: originalFavorites,
+          totalElements: get().totalElements + 1,
+          totalPages: Math.ceil((get().totalElements + 1) / itemsPerPage),
+          pendingToggles: new Set([...get().pendingToggles].filter(id => id !== publicationId))
+        });
+        return { 
+          success: false, 
+          error: 'La publicación no fue encontrada.' 
+        };
+      }
+      
+      if (response.status >= 400) {
+        // Revert optimistic update
+        set({
+          favorites: originalFavorites,
+          totalElements: get().totalElements + 1,
+          totalPages: Math.ceil((get().totalElements + 1) / itemsPerPage),
+          pendingToggles: new Set([...get().pendingToggles].filter(id => id !== publicationId))
+        });
+        return { 
+          success: false, 
+          error: response.data?.message || `Error del servidor: ${response.status}` 
+        };
+      }
       
       set({
         pendingToggles: new Set([...get().pendingToggles].filter(id => id !== publicationId))
@@ -119,6 +243,7 @@ export const useFavoritesStore = create((set, get) => ({
       
       return { success: true, data: response.data };
     } catch (error) {
+      // Revert optimistic update
       set({
         favorites: originalFavorites,
         totalElements: get().totalElements + 1,
@@ -126,31 +251,159 @@ export const useFavoritesStore = create((set, get) => ({
         pendingToggles: new Set([...get().pendingToggles].filter(id => id !== publicationId))
       });
       
+      // Enhanced error handling
+      let errorMessage = 'Error al actualizar favoritos';
+      
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+        if (status === 401) {
+          // Session expired - logout user
+          if (token) {
+            useAuthStore.getState().logout();
+          }
+          errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+        } else if (status === 403) {
+          errorMessage = 'No tienes permiso para realizar esta acción. Por favor, verifica tu sesión.';
+        } else if (status === 404) {
+          errorMessage = 'La publicación no fue encontrada.';
+        } else {
+          errorMessage = error.response.data?.message || `Error del servidor (${status})`;
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
+      } else {
+        // Error setting up the request
+        errorMessage = error.message || 'Error al procesar la solicitud';
+      }
+      
+      console.error('Error toggling favorite:', {
+        error,
+        response: error.response,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Error al actualizar favoritos' 
+        error: errorMessage
       };
     }
   },
 
   toggleFavorite: async (token, publicationId) => {
+    // Validate token before proceeding
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      return { 
+        success: false, 
+        error: 'No hay token de autenticación. Por favor, inicia sesión nuevamente.' 
+      };
+    }
+
     try {
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/favorites/toggle`;
+      const requestBody = { publicationId };
+      
+      console.log('Toggle favorite request:', {
+        url: apiUrl,
+        publicationId,
+        tokenLength: token.length,
+        tokenPrefix: token.substring(0, 20) + '...'
+      });
+      
       const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/favorites/toggle`,
-        { publicationId },
+        apiUrl,
+        requestBody,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          validateStatus: (status) => status < 500 // Don't throw for 4xx errors
         }
       );
       
+      console.log('Toggle favorite response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
+      });
+      
+      // Check if response indicates an error
+      if (response.status === 401) {
+        // Session expired - logout user
+        if (token) {
+          useAuthStore.getState().logout();
+        }
+        return { 
+          success: false, 
+          error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.' 
+        };
+      }
+      
+      if (response.status === 403) {
+        return { 
+          success: false, 
+          error: 'No tienes permiso para realizar esta acción. Por favor, verifica tu sesión.' 
+        };
+      }
+      
+      if (response.status === 404) {
+        return { 
+          success: false, 
+          error: 'La publicación no fue encontrada.' 
+        };
+      }
+      
+      if (response.status >= 400) {
+        return { 
+          success: false, 
+          error: response.data?.message || `Error del servidor: ${response.status}` 
+        };
+      }
+      
       return { success: true, data: response.data };
     } catch (error) {
+      // Enhanced error handling
+      let errorMessage = 'Error al actualizar favoritos';
+      
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+        if (status === 401) {
+          // Session expired - logout user
+          if (token) {
+            useAuthStore.getState().logout();
+          }
+          errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+        } else if (status === 403) {
+          errorMessage = 'No tienes permiso para realizar esta acción. Por favor, verifica tu sesión.';
+        } else if (status === 404) {
+          errorMessage = 'La publicación no fue encontrada.';
+        } else {
+          errorMessage = error.response.data?.message || `Error del servidor (${status})`;
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
+      } else {
+        // Error setting up the request
+        errorMessage = error.message || 'Error al procesar la solicitud';
+      }
+      
+      console.error('Error toggling favorite:', {
+        error,
+        response: error.response,
+        status: error.response?.status,
+        data: error.response?.data,
+        publicationId,
+        tokenExists: !!token
+      });
+      
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Error al actualizar favoritos' 
+        error: errorMessage 
       };
     }
   },

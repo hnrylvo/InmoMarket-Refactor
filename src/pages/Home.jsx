@@ -97,13 +97,14 @@ function PropertyCarousel({properties, onFavoriteChange}) {
         ref={carouselRef}
         className="flex gap-6 overflow-x-auto pb-4 scroll-smooth select-none scrollbar-hide"
       >
-        {properties.map((property, i) => (
+        {properties.map((property) => (
           <div
-            key={i}
+            key={property.id}
             className="flex-shrink-0 w-[85vw] sm:w-[340px] transition-all"
           >
             <ExpandedPropertyCard 
               {...property} 
+              favorited={property.favorited}
               onFavoriteChange={(favorited) => onFavoriteChange(property.id, favorited)}
             />
           </div>
@@ -124,7 +125,7 @@ function PropertyCarousel({properties, onFavoriteChange}) {
 
 export default function Home() {
   const { token } = useAuthStore();
-  const { fetchFavorites, toggleFavorite, favorites } = useFavoritesStore();
+  const { fetchFavorites, toggleFavorite, favorites, loading: favoritesLoading } = useFavoritesStore();
   const { popularProperties, newListings, loading: homeListingsLoading, error: homeListingsError, fetchHomeListings, isDataLoaded, updateFavoriteStatus } = useHomeListingsStore();
   const { publications, loading: publicationsLoading, error: publicationsError, fetchPublications } = usePublicationsStore();
   const fetchVisitNotifications = useVisitsStore((state) => state.fetchVisitNotifications)
@@ -137,6 +138,21 @@ export default function Home() {
   const isFavorited = useCallback((publicationId) => {
     return favorites.some(fav => fav.id === publicationId);
   }, [favorites]);
+
+  // Sync favorite status with popularProperties and newListings when favorites are loaded
+  // This ensures properties show correct favorite status after page reload
+  useEffect(() => {
+    // Only sync when we have properties loaded
+    // If user is not logged in, favoritesLoading will be false and favorites will be empty
+    // If user is logged in, wait for favorites to finish loading
+    if (popularProperties.length > 0 || newListings.length > 0) {
+      // If user is logged in, wait for favorites to load; otherwise sync immediately (with empty favorites)
+      if (token ? !favoritesLoading : true) {
+        const favoriteIds = new Set(favorites.map(fav => fav.id));
+        updateFavoriteStatus(null, null, favoriteIds);
+      }
+    }
+  }, [favorites, favoritesLoading, popularProperties.length, newListings.length, updateFavoriteStatus, token]);
 
   // Add handler for favorite changes
   const handleFavoriteChange = useCallback(async (publicationId, isFavorited) => {
@@ -152,7 +168,7 @@ export default function Home() {
       const result = await toggleFavorite(token, publicationId);
       if (result.success) {
         toast.success(isFavorited ? "Agregado a favoritos" : "Eliminado de favoritos");
-        // Refresh favorites to update the UI
+        // Refresh favorites to update the UI - this will trigger the sync effect above
         await fetchFavorites(token, 0);
       } else {
         // Revert the optimistic update if the API call failed
@@ -229,8 +245,8 @@ export default function Home() {
           <Skeleton className="h-[400px] lg:h-[500px] w-full rounded-2xl mb-8" />
           <div className="space-y-8">
             <Skeleton className="h-8 w-48" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
                 <Card key={i} className="space-y-4 p-0">
                   <Skeleton className="h-[200px] w-full rounded-t-lg" />
                   <div className="p-5 space-y-2">
@@ -353,54 +369,68 @@ export default function Home() {
       </section>
 
       {/* Popular Properties */}
-      {popularProperties.length > 0 && (
-        <section className="container mx-auto px-4 py-8 lg:py-12" aria-label="Propiedades populares">
-          <div className="space-y-6 lg:space-y-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl lg:text-3xl font-bold text-foreground">Propiedades Populares</h2>
-              <button 
-                onClick={() => navigate('/publications')}
-                className="text-primary hover:text-primary/80 font-medium hidden sm:block transition-colors"
-                aria-label="Ver todas las propiedades populares"
-              >
-                Ver todas
-              </button>
-            </div>
+      {popularProperties.length > 0 && (() => {
+        // Remove duplicates by ID to prevent showing the same property twice
+        const uniquePopularProperties = popularProperties.filter((property, index, self) =>
+          index === self.findIndex(p => p.id === property.id)
+        );
+        
+        return (
+          <section className="container mx-auto px-4 py-8 lg:py-12" aria-label="Propiedades populares">
+            <div className="space-y-6 lg:space-y-8">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl lg:text-3xl font-bold text-foreground">Propiedades Populares</h2>
+                <button 
+                  onClick={() => navigate('/publications')}
+                  className="text-primary hover:text-primary/80 font-medium hidden sm:block transition-colors"
+                  aria-label="Ver todas las propiedades populares"
+                >
+                  Ver todas
+                </button>
+              </div>
 
-            <PropertyCarousel
-              properties={popularProperties}
-              onFavoriteChange={handleFavoriteChange}
-            />
-          </div>
-        </section>
-      )}
+              <PropertyCarousel
+                properties={uniquePopularProperties}
+                onFavoriteChange={handleFavoriteChange}
+              />
+            </div>
+          </section>
+        );
+      })()}
 
       {/* New Listings */}
-      {newListings.length > 0 && (
-        <section className="container mx-auto px-4 py-8 lg:py-12" aria-label="Nuevas publicaciones">
-          <div className="space-y-6 lg:space-y-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl lg:text-3xl font-bold text-foreground">Nuevas Publicaciones</h2>
-              <button 
-                onClick={() => navigate('/publications')}
-                className="text-primary hover:text-primary/80 font-medium hidden sm:block transition-colors"
-                aria-label="Ver todas las nuevas publicaciones"
-              >
-                Ver todas
-              </button>
+      {newListings.length > 0 && (() => {
+        // Remove duplicates by ID to prevent showing the same property twice
+        const uniqueNewListings = newListings.filter((property, index, self) =>
+          index === self.findIndex(p => p.id === property.id)
+        );
+        
+        return (
+          <section className="container mx-auto px-4 py-8 lg:py-12" aria-label="Nuevas publicaciones">
+            <div className="space-y-6 lg:space-y-8">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl lg:text-3xl font-bold text-foreground">Nuevas Publicaciones</h2>
+                <button 
+                  onClick={() => navigate('/publications')}
+                  className="text-primary hover:text-primary/80 font-medium hidden sm:block transition-colors"
+                  aria-label="Ver todas las nuevas publicaciones"
+                >
+                  Ver todas
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {uniqueNewListings.map((property) => (
+                  <ExpandedPropertyCard
+                    key={property.id}
+                    {...property}
+                    onFavoriteChange={(favorited) => handleFavoriteChange(property.id, favorited)}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {newListings.map((property) => (
-                <ExpandedPropertyCard
-                  key={property.id}
-                  {...property}
-                  onFavoriteChange={(favorited) => handleFavoriteChange(property.id, favorited)}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+          </section>
+        );
+      })()}
 
       {/* Call to Action */}
       <Footer />
