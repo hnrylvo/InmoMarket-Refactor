@@ -13,6 +13,7 @@ import { PropertyRoute } from './components/PropertyRoute'
 import { Toaster } from "@/components/ui/sonner"
 import MyPublications from './pages/publications/MyPublications'
 import CreatePublication from './pages/publications/CreatePublication'
+import EditPublication from './pages/publications/EditPublication'
 import Reports from './pages/Reports'
 import Visits from './pages/Visits'
 import UserProfile from './pages/Settings/UserProfile'
@@ -38,21 +39,50 @@ export default function App() {
           </ProtectedRoute>
         } />
 
-        {/* Public Routes with Layout - accessible to everyone */}
+        {/* All Routes with Layout - sidebar available in all views */}
         <Route element={<Layout />}>
+          {/* Public Routes - accessible to everyone */}
           <Route path="/" element={<Home />} />
           <Route path="/publications" element={<PublicationsList />} />
           <Route path="/property/:id/:slug?" element={<PropertyRoute />} />
           <Route path="/user/:userId" element={<UserProfile />} />
-        </Route>
-
-        
-          <Route path="/favorites" element={<Favorites />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/notifications" element={<NotificationsList />} />
-          <Route path="/my-publications" element={<MyPublications />} />
-          <Route path="/my-publications/create" element={<CreatePublication />} />
-          <Route path="/visits" element={<Visits />} />
+          
+          {/* Protected Routes - require authentication */}
+          <Route path="/favorites" element={
+            <ProtectedRoute>
+              <Favorites />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          } />
+          <Route path="/notifications" element={
+            <ProtectedRoute>
+              <NotificationsList />
+            </ProtectedRoute>
+          } />
+          <Route path="/my-publications" element={
+            <ProtectedRoute>
+              <MyPublications />
+            </ProtectedRoute>
+          } />
+          <Route path="/my-publications/create" element={
+            <ProtectedRoute>
+              <CreatePublication />
+            </ProtectedRoute>
+          } />
+          <Route path="/my-publications/edit/:id" element={
+            <ProtectedRoute>
+              <EditPublication />
+            </ProtectedRoute>
+          } />
+          <Route path="/visits" element={
+            <ProtectedRoute>
+              <Visits />
+            </ProtectedRoute>
+          } />
           
           {/* Admin Routes - Solo accesible para administradores */}
           <Route 
@@ -71,6 +101,7 @@ export default function App() {
               </AdminRoute>
             } 
           />
+        </Route>
       </Routes>
     </ErrorBoundary>
   )
