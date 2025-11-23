@@ -32,7 +32,8 @@ export function SiteHeader() {
 
     // Get the current property if we're on a property page
     const currentProperty = id ? publications.find(p => p.id === id) : null
-    const publicationTitle = currentProperty?.title
+    // Use propertyTitle first, then fall back to title
+    const publicationTitle = currentProperty?.propertyTitle || currentProperty?.title
 
     // Always add home
     breadcrumbs.push({

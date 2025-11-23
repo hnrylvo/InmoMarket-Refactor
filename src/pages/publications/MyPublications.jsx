@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react'
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus, Edit } from "lucide-react"
 import { useNavigate } from 'react-router-dom'
 import ExpandedPropertyCard from "@/components/Home/ExpandedPropertyCard"
 import { useUserPublicationsStore } from '@/stores/useUserPublicationsStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { Skeleton } from "@/components/ui/skeleton"
+import { Card } from "@/components/ui/card"
 
 export default function MyPublications() {
     const navigate = useNavigate()
@@ -100,13 +101,26 @@ export default function MyPublications() {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {publications.map((publication) => (
-                        <ExpandedPropertyCard
-                            key={publication.id}
-                            {...publication}
-                            onFavoriteChange={(favorited) => {
-                                console.log('Favorite changed:', favorited);
-                            }}
-                        />
+                        <div key={publication.id} className="relative group h-full">
+                            <ExpandedPropertyCard
+                                {...publication}
+                                onFavoriteChange={(favorited) => {
+                                    console.log('Favorite changed:', favorited);
+                                }}
+                            />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/my-publications/edit/${publication.id}`);
+                                }}
+                                className="absolute top-3 left-3 z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-900 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-2"
+                            >
+                                <Edit className="w-4 h-4" />
+                                Editar
+                            </Button>
+                        </div>
                     ))}
                 </div>
             )}

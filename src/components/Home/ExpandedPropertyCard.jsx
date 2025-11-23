@@ -54,7 +54,7 @@ export default function ExpandedPropertyCard(props) {
   };
 
   return (
-    <Card className="group overflow-hidden hover:shadow-sm transition-all duration-300 hover:scale-[1.02]">
+    <Card className="group overflow-hidden hover:shadow-sm transition-all duration-300 hover:scale-[1.02] h-full flex flex-col">
       <div className="relative">
         <Link to={`/property/${id}`} className="block">
           <div className="relative aspect-[3/2] overflow-hidden">
@@ -105,7 +105,7 @@ export default function ExpandedPropertyCard(props) {
           <span className="line-clamp-1">{location}</span>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700 mt-auto">
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-1.5">
               <BedDouble className="h-4 w-4 text-gray-500 dark:text-gray-300" />

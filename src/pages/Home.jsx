@@ -245,8 +245,8 @@ export default function Home() {
           <Skeleton className="h-[400px] lg:h-[500px] w-full rounded-2xl mb-8" />
           <div className="space-y-8">
             <Skeleton className="h-8 w-48" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
                 <Card key={i} className="space-y-4 p-0">
                   <Skeleton className="h-[200px] w-full rounded-t-lg" />
                   <div className="p-5 space-y-2">
@@ -418,7 +418,7 @@ export default function Home() {
                   Ver todas
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {uniqueNewListings.map((property) => (
                   <ExpandedPropertyCard
                     key={property.id}
