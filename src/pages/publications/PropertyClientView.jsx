@@ -17,12 +17,13 @@ export default function PropertyClientView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { publications, loading, error, fetchPublications } = usePublicationsStore();
-  const { token } = useAuthStore();
+  const { token, userId } = useAuthStore();
   const { toggleFavorite, fetchFavorites } = useFavoritesStore();
   const [isFavorited, setIsFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const property = publications.find(p => p.id === id);
+  const isOwnPublication = userId && property?.publisherId && userId === property.publisherId;
 
   // Generate slug for breadcrumbs
   const slug = property?.title
@@ -63,9 +64,14 @@ export default function PropertyClientView() {
     checkFavoriteStatus();
   }, [token, property?.id]);
 
-  const handleFavoriteToggle = async () => {
+  const handleFavoriteToggle = async (newState) => {
     if (!token) {
       toast.error("Debes iniciar sesión para agregar a favoritos");
+      return;
+    }
+
+    if (isOwnPublication) {
+      toast.error("No puedes agregar tu propia publicación a favoritos");
       return;
     }
 
@@ -74,12 +80,14 @@ export default function PropertyClientView() {
       return;
     }
 
+    // If newState is provided, use it; otherwise toggle
+    const targetState = newState !== undefined ? newState : !isFavorited;
+
     try {
       const result = await toggleFavorite(token, property.id);
       if (result.success) {
-        const newFavoritedState = !isFavorited;
-        setIsFavorited(newFavoritedState);
-        toast.success(newFavoritedState ? "Agregado a favoritos" : "Eliminado de favoritos");
+        setIsFavorited(targetState);
+        toast.success(targetState ? "Agregado a favoritos" : "Eliminado de favoritos");
       } else {
         toast.error(result.error || "Error al actualizar favoritos");
       }
@@ -355,11 +363,17 @@ export default function PropertyClientView() {
                 </div>
                 <div 
                   className="absolute top-2 right-2 bg-black/30 backdrop-blur-sm rounded-full shadow-lg"
-                  onClick={handleFavoriteToggle}
+                  onClick={(e) => {
+                    if (isOwnPublication) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
+                  }}
                 >
                   <FavoriteButton
-                    isFavorited={isFavorited}
+                    isFavorited={isOwnPublication ? false : isFavorited}
                     onFavoriteChange={handleFavoriteToggle}
+                    disabled={isOwnPublication}
                   />
                 </div>
                 {property.images.length > 1 && (
