@@ -1,19 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function FavoriteButton({
                                  isFavorited: initialFavorited = false,
                                  onFavoriteChange,
                                  ariaLabel = "Add to wishlist",
-                                 isPending = false
+                                 isPending = false,
+                                 disabled = false
                                }) {
   const [isFavorited, setIsFavorited] = useState(initialFavorited);
+
+  // Update internal state when prop changes, but only if not disabled
+  useEffect(() => {
+    if (!disabled) {
+      setIsFavorited(initialFavorited);
+    }
+  }, [initialFavorited, disabled]);
 
   const toggleFavorite = (e) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // Prevent multiple clicks while pending
-    if (isPending) {
+    // Prevent clicks if disabled or pending
+    if (disabled || isPending) {
       return;
     }
     
@@ -22,24 +30,30 @@ export function FavoriteButton({
     if (onFavoriteChange) onFavoriteChange(newValue);
   };
 
+  const isDisabled = disabled || isPending;
+  
+  // When disabled, always show as not favorited (white) regardless of state
+  const displayFavorited = disabled ? false : isFavorited;
+
   return (
     <button
-      aria-label={ariaLabel}
+      aria-label={disabled ? "No puedes agregar tu propia publicación a favoritos" : ariaLabel}
       type="button"
       onClick={toggleFavorite}
-      disabled={isPending}
+      disabled={isDisabled}
+      title={disabled ? "No puedes agregar tu propia publicación a favoritos" : undefined}
       className={`w-8 h-8 flex items-center justify-center rounded-full group transition ${
-        isPending ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'
+        isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'
       }`}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 32 32"
-        fill={isFavorited ? "red" : "white"}
-        stroke={isFavorited ? "red" : "white"}
+        fill={displayFavorited ? "red" : "white"}
+        stroke={displayFavorited ? "red" : "white"}
         strokeWidth={2}
         className={`w-6 h-6 transition ${
-          !isFavorited ? "group-hover:opacity-80" : ""
+          !displayFavorited && !isDisabled ? "group-hover:opacity-80" : ""
         } ${isPending ? "animate-pulse" : ""}`}
         aria-hidden="true"
         focusable="false"

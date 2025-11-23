@@ -66,9 +66,23 @@ export const useHomeListingsStore = create((set, get) => ({
         throw new Error('Invalid response format from API');
       }
 
+      // Transform and remove duplicates based on property ID
+      const transformAndDeduplicate = (properties, isNewListing = false) => {
+        const seenIds = new Set();
+        return properties
+          .map(property => transformProperty(property, isNewListing))
+          .filter(property => {
+            if (seenIds.has(property.id)) {
+              return false; // Duplicate, filter it out
+            }
+            seenIds.add(property.id);
+            return true; // Keep this property
+          });
+      };
+
       set({
-        popularProperties: popularResponse.data.map(property => transformProperty(property, false)),
-        newListings: newListingsResponse.data.map(property => transformProperty(property, true)),
+        popularProperties: transformAndDeduplicate(popularResponse.data, false),
+        newListings: transformAndDeduplicate(newListingsResponse.data, true),
         loading: false,
         isDataLoaded: true
       });
@@ -99,14 +113,31 @@ export const useHomeListingsStore = create((set, get) => ({
     return get().fetchHomeListings();
   },
 
-  updateFavoriteStatus: (propertyId, isFavorited) => {
-    set((state) => ({
-      popularProperties: state.popularProperties.map(property =>
-        property.id === propertyId ? { ...property, favorited: isFavorited } : property
-      ),
-      newListings: state.newListings.map(property =>
-        property.id === propertyId ? { ...property, favorited: isFavorited } : property
-      )
-    }));
+  updateFavoriteStatus: (propertyId, isFavorited, favoriteIds = null) => {
+    set((state) => {
+      // If favoriteIds is provided, sync all properties with the favorite list
+      if (favoriteIds !== null) {
+        return {
+          popularProperties: state.popularProperties.map(property => ({
+            ...property,
+            favorited: favoriteIds.has(property.id)
+          })),
+          newListings: state.newListings.map(property => ({
+            ...property,
+            favorited: favoriteIds.has(property.id)
+          }))
+        };
+      }
+      
+      // Otherwise, update a specific property
+      return {
+        popularProperties: state.popularProperties.map(property =>
+          property.id === propertyId ? { ...property, favorited: isFavorited } : property
+        ),
+        newListings: state.newListings.map(property =>
+          property.id === propertyId ? { ...property, favorited: isFavorited } : property
+        )
+      };
+    });
   }
 })); 

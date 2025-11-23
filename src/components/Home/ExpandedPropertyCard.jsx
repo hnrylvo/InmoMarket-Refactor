@@ -4,6 +4,7 @@ import { FavoriteButton } from "@/components/ui/favoriteButton";
 import { Link } from "react-router-dom";
 import { ReportDialog } from "@/components/ReportDialog";
 import { Card } from "@/components/ui/card";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function ExpandedPropertyCard(props) {
   const {
@@ -23,6 +24,9 @@ export default function ExpandedPropertyCard(props) {
     isPending = false,
   } = props;
 
+  const { userId } = useAuthStore();
+  const isOwnPublication = userId && publisherId && userId === publisherId;
+
   const slug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -31,6 +35,22 @@ export default function ExpandedPropertyCard(props) {
   const handleButtonClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Prevent favorite toggle if it's own publication
+    if (isOwnPublication) {
+      return;
+    }
+  };
+
+  const handleFavoriteChange = (newState) => {
+    // Prevent favorite toggle if it's own publication
+    if (isOwnPublication) {
+      return;
+    }
+    
+    if (onFavoriteChange) {
+      onFavoriteChange(newState);
+    }
   };
 
   return (
@@ -61,9 +81,10 @@ export default function ExpandedPropertyCard(props) {
           onClick={handleButtonClick}
         >
           <FavoriteButton
-            isFavorited={favorited}
-            onFavoriteChange={onFavoriteChange}
+            isFavorited={isOwnPublication ? false : favorited}
+            onFavoriteChange={handleFavoriteChange}
             isPending={isPending}
+            disabled={isOwnPublication}
           />
         </div>
 
