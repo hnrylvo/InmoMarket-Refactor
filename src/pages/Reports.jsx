@@ -89,8 +89,8 @@ export default function Reports() {
   const stats = useMemo(() => {
     const pending = reports.filter(r => r.status === 'PENDING').length;
     const resolved = reports.filter(r => r.status === 'RESOLVED').length;
-    const rejected = reports.filter(r => r.status === 'REJECTED').length;
-    return { pending, resolved, rejected, total: reports.length };
+    const dismissed = reports.filter(r => r.status === 'DISMISSED').length;
+    return { pending, resolved, dismissed, total: reports.length };
   }, [reports]);
 
   // Filtrar reportes
@@ -123,7 +123,7 @@ export default function Reports() {
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
       case 'RESOLVED':
         return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-      case 'REJECTED':
+      case 'DISMISSED':
         return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
@@ -136,7 +136,7 @@ export default function Reports() {
         return <Clock className="h-4 w-4" />;
       case 'RESOLVED':
         return <CheckCircle2 className="h-4 w-4" />;
-      case 'REJECTED':
+      case 'DISMISSED':
         return <XCircle className="h-4 w-4" />;
       default:
         return <AlertCircle className="h-4 w-4" />;
@@ -223,11 +223,11 @@ export default function Reports() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Rechazados</CardTitle>
+                <CardTitle className="text-sm font-medium">Descartados</CardTitle>
                 <XCircle className="h-4 w-4 text-red-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
+                <div className="text-2xl font-bold text-red-600">{stats.dismissed}</div>
                 <p className="text-xs text-muted-foreground">Descartados</p>
               </CardContent>
             </Card>
@@ -262,7 +262,7 @@ export default function Reports() {
                   <SelectItem value="ALL">Todos los estados</SelectItem>
                   <SelectItem value="PENDING">Pendientes</SelectItem>
                   <SelectItem value="RESOLVED">Resueltos</SelectItem>
-                  <SelectItem value="REJECTED">Rechazados</SelectItem>
+                  <SelectItem value="DISMISSED">Descartados</SelectItem>
                 </SelectContent>
               </Select>
                     </div>
@@ -365,7 +365,8 @@ export default function Reports() {
                             <span className="flex items-center gap-1">
                               {getStatusIcon(report.status)}
                               {report.status === 'PENDING' ? 'PENDIENTE' : 
-                               report.status === 'RESOLVED' ? 'RESUELTO' : 'RECHAZADO'}
+                               report.status === 'RESOLVED' ? 'RESUELTO' : 
+                               report.status === 'DISMISSED' ? 'DESCARTADO' : report.status}
                             </span>
                           </Badge>
                         </td>
@@ -421,7 +422,8 @@ export default function Reports() {
                           <span className="flex items-center gap-1">
                             {getStatusIcon(report.status)}
                             {report.status === 'PENDING' ? 'PENDIENTE' : 
-                             report.status === 'RESOLVED' ? 'RESUELTO' : 'RECHAZADO'}
+                             report.status === 'RESOLVED' ? 'RESUELTO' : 
+                             report.status === 'DISMISSED' ? 'DESCARTADO' : report.status}
                           </span>
                         </Badge>
                       </div>
