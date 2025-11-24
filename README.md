@@ -14,13 +14,21 @@ Administradores que requieren una herramienta clara para supervisar publicacione
 
 ¿Qué problema resuelve?
 
-El uso de redes sociales para la compra y venta de propiedades presenta varios inconvenientes: información dispersa, publicaciones inexactas o engañosas, perfiles poco confiables y falta de moderación. Esto dificulta la experiencia tanto para compradores como para vendedores.
+El uso de redes sociales para la compra y venta de propiedades presenta varios inconvenientes:
+
+Información dispersa.
+
+Publicaciones inexactas o engañosas.
+
+Perfiles poco confiables.
+
+Ausencia de moderación.
 
 InmoMarket soluciona estos problemas al proporcionar:
 
 Un sistema centralizado y ordenado para gestionar publicaciones.
 
-Control total del usuario sobre su información y su contenido.
+Control total del usuario sobre su información y sus contenidos.
 
 Perfiles más fáciles de identificar y validar.
 
@@ -41,17 +49,17 @@ Publicaciones
 
 Crear publicaciones con información detallada de la propiedad.
 
-Editar únicamente las publicaciones propias.
+Editar únicamente sus publicaciones.
 
-Visualizar todas las publicaciones disponibles en la plataforma mediante un listado general.
+Visualizar todas las publicaciones disponibles en un listado general.
 
 Sistema de reportes
 
-Cualquier usuario puede denunciar una publicación por información falsa o por infringir las reglas.
+Cualquier usuario puede denunciar publicaciones falsas o que infrinjan reglas.
 
-El administrador recibe y gestiona todos los reportes.
+El administrador recibe y gestiona los reportes.
 
-El administrador puede modificar el estado de una publicación (activa, suspendida, en revisión).
+El administrador puede cambiar el estado de una publicación (activa, suspendida, en revisión).
 
 Roles y Permisos
 Usuarios (Compradores y Vendedores)
@@ -60,7 +68,7 @@ Crear publicaciones.
 
 Ver sus propias publicaciones.
 
-Ver publicaciones generales de la plataforma.
+Ver publicaciones generales.
 
 Editar únicamente sus publicaciones.
 
@@ -76,27 +84,26 @@ Ver todos los usuarios registrados.
 
 Ver todas las publicaciones activas o inactivas.
 
-Revisar todas las publicaciones reportadas.
+Revisar publicaciones reportadas.
 
-Cambiar el estado de las publicaciones reportadas según corresponda.
+Cambiar el estado de publicaciones reportadas.
 
-InmoMarket Frontend
+Frontend de InmoMarket
 
-La aplicación cuenta con un frontend desarrollado con React, Vite y Tailwind CSS. Se implementaron buenas prácticas en el manejo del estado, la autenticación y la organización del código, garantizando una experiencia fluida tanto en escritorio como en dispositivos móviles.
+La aplicación cuenta con un frontend desarrollado con React, Vite y Tailwind CSS.
+Incluye:
 
-Características del Frontend
+Manejo de estado con Zustand.
 
-Autenticación unificada mediante Zustand.
+Protección de rutas.
 
-Protección de rutas con redirecciones automáticas según el estado del usuario.
+Manejo global de errores.
 
-Manejo de errores mediante ErrorBoundary.
+Diseño responsive.
 
-Diseño totalmente responsive.
+Modo claro y oscuro.
 
-Soporte para modo claro y oscuro.
-
-Arquitectura modular basada en componentes independientes.
+Arquitectura modular.
 
 Tecnologías utilizadas
 
@@ -143,26 +150,18 @@ Sonner
 Lucide React
 
 Instalación Paso a Paso
-
-Clonar el repositorio:
-
+1. Clonar el repositorio
 git clone <url-del-repositorio>
 cd inmomarket-frontend
 
-
-Instalar dependencias:
-
+2. Instalar dependencias
 npm install
 
-
-Crear archivo de entorno:
-
+3. Crear archivo de entorno
 cp .env.example .env
 
-
-Configurar la URL del backend en .env:
-
-VITE_API_BASE_URL= https://web-production-06592e.up.railway.app
+4. Configurar la URL del backend
+VITE_API_BASE_URL=https://web-production-06592e.up.railway.app
 
 Ejecución
 Modo desarrollo
@@ -180,13 +179,12 @@ Vista previa del build
 npm run preview
 
 Variables de Entorno (.env.example)
-# URL base del backend de la API
 VITE_API_BASE_URL=https://web-production-06592e.up.railway.app
 
 
 Explicación:
 
-VITE_API_BASE_URL: Punto base donde el frontend realiza las solicitudes HTTP al backend (autenticación, publicaciones, perfiles, etc.).
+VITE_API_BASE_URL: URL base donde el frontend envía solicitudes HTTP al backend.
 
 Estructura del Proyecto
 src/
@@ -204,22 +202,23 @@ Autenticación
 La autenticación se maneja mediante Zustand con persistencia en localStorage:
 
 import { useAuthStore } from '@/stores/useAuthStore';
+
 const { token, login, logout } = useAuthStore();
 
 Protección de Rutas
 
-Las rutas públicas (por ejemplo /login o /register) redirigen al inicio si el usuario ya está autenticado.
+Las rutas públicas (como /login o /register) redirigen al inicio si el usuario ya está autenticado.
 
 Las rutas privadas requieren un token válido para ingresar.
 
 Contribución
 
-Fork del repositorio
+Fork del repositorio.
 
-Crear rama con la nueva funcionalidad
+Crear una rama para la funcionalidad nueva.
 
-Realizar los commits
+Realizar los commits.
 
-Subir la rama
+Subir la rama.
 
-Abrir un Pull Request
+Abrir un Pull Request.
