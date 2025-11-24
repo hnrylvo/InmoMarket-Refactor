@@ -1,7 +1,9 @@
+import { useState } from "react"
 import { BedDouble, Bath, MapPin } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Link } from "react-router-dom"
+import { UserInfoDialog } from "@/components/UserInfoDialog"
 
 export default function CompactPropertyCard({
                                               id = "property-123",
@@ -13,8 +15,11 @@ export default function CompactPropertyCard({
                                               bathrooms = 2,
                                               publisherName = "Jane Cooper",
                                               publisherId = null,
+                                              userEmail = null,
+                                              userPhoneNumber = null,
                                               isNew = false,
                                             }) {
+  const [dialogOpen, setDialogOpen] = useState(false);
   return (
     <Link to={`/property/${id}`} className="block">
       <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-1">
@@ -63,13 +68,16 @@ export default function CompactPropertyCard({
                 </div>
               </div>
               {publisherId ? (
-                <Link 
-                  to={`/user/${publisherId}`}
-                  className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-full hover:text-primary transition-colors"
-                  onClick={(e) => e.stopPropagation()}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDialogOpen(true);
+                  }}
+                  className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-full hover:text-primary transition-colors cursor-pointer"
                 >
                   {publisherName}
-                </Link>
+                </button>
               ) : (
                 <div className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-full">
                   {publisherName}
@@ -79,6 +87,14 @@ export default function CompactPropertyCard({
           </CardContent>
         </div>
       </Card>
+      <UserInfoDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        publisherId={publisherId}
+        publisherName={publisherName}
+        userEmail={userEmail}
+        userPhoneNumber={userPhoneNumber}
+      />
     </Link>
   )
 }

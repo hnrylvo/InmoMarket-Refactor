@@ -65,6 +65,8 @@ export const usePublicationsStore = create((set, get) => ({
                 floors: pub.propertyFloors,
                 publisherName: pub.userName,
                 publisherId: pub.userId || pub.ownerId || null, // ID del vendedor para ver su perfil
+                userEmail: pub.userEmail || null,
+                userPhoneNumber: pub.userPhoneNumber || null,
                 isNew: false,
                 favorited: false,
                 description: pub.propertyDescription,
@@ -136,6 +138,8 @@ export const usePublicationsStore = create((set, get) => ({
                     floors: pub.propertyFloors,
                     publisherName: pub.userName,
                     publisherId: pub.userId || pub.ownerId || null, // ID del vendedor para ver su perfil
+                    userEmail: pub.userEmail || null,
+                    userPhoneNumber: pub.userPhoneNumber || null,
                     isNew: true,
                     favorited: isFavorite,
                     description: pub.propertyDescription,
@@ -229,6 +233,8 @@ export const usePublicationsStore = create((set, get) => ({
                 floors: pub.propertyFloors,
                 publisherName: pub.userName,
                 publisherId: publisherId, // ID del vendedor para ver su perfil
+                userEmail: pub.userEmail || null,
+                userPhoneNumber: pub.userPhoneNumber || null,
                 isNew: true,
                 favorited: false,
                 description: pub.propertyDescription,
@@ -475,6 +481,8 @@ export const usePublicationsStore = create((set, get) => ({
                 floors: pub.propertyFloors,
                 publisherName: pub.userName,
                 publisherId: pub.userId || pub.ownerId || null,
+                userEmail: pub.userEmail || null,
+                userPhoneNumber: pub.userPhoneNumber || null,
                 isNew: false,
                 favorited: false,
                 description: pub.propertyDescription,
