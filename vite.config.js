@@ -12,7 +12,21 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 5173
+    port: 5173,
+    proxy: {
+      '/api/nominatim': {
+        target: 'https://nominatim.openstreetmap.org',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/nominatim/, ''),
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            proxyReq.setHeader('User-Agent', 'InmoMarket-Refactor/1.0')
+            proxyReq.setHeader('Accept', 'application/json')
+            proxyReq.setHeader('Accept-Language', 'es,en')
+          })
+        }
+      }
+    }
   },
   // Ensure environment variables are loaded
   envDir: '.',

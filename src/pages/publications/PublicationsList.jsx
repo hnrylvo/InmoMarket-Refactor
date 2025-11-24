@@ -185,8 +185,8 @@ export default function PublicationsList() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[...Array(6)].map((_, index) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {[...Array(8)].map((_, index) => (
           <div key={index} className="space-y-4">
             <Skeleton className="h-[200px] w-full rounded-lg" />
             <div className="space-y-2">
@@ -399,7 +399,7 @@ export default function PublicationsList() {
               <div 
                 key={publication.id}
                 onClick={() => handlePropertyClick(publication)}
-                className="cursor-pointer"
+                className="cursor-pointer h-full"
               >
                 <ExpandedPropertyCard
                   {...publication}

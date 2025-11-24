@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,9 +11,10 @@ import PriceInput from '@/components/shared/PriceInput'
 import LocationMap from '@/components/shared/LocationMap'
 import { Check, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { usePublicationsStore } from '@/stores/usePublicationsStore'
+import { useUserPublicationsStore } from '@/stores/useUserPublicationsStore'
 
 const daysOfWeek = [
     { value: '1', label: 'Lunes' },
@@ -71,7 +72,7 @@ const steps = [
         id: 'images',
         title: 'Imágenes',
         fields: [
-            { id: 'files', label: 'Imágenes de la Propiedad', type: 'file', required: true },
+            { id: 'files', label: 'Nuevas Imágenes (Opcional)', type: 'file', required: false },
         ]
     },
     {
@@ -108,30 +109,168 @@ const convertToWebP = async (file) => {
     })
 }
 
-export default function CreatePublication() {
+export default function EditPublication() {
     const navigate = useNavigate()
-    const { token } = useAuthStore()
+    const { id } = useParams()
+    const { token, userId } = useAuthStore()
+    const { publications, fetchPublicationById, updatePublication } = usePublicationsStore()
+    const { publications: userPublications, refreshUserPublications } = useUserPublicationsStore()
     const [currentStep, setCurrentStep] = useState(0)
     const [formData, setFormData] = useState({})
     const [timeSlots, setTimeSlots] = useState([])
+    const [originalTimeSlots, setOriginalTimeSlots] = useState([]) // Store original to compare
     const [previewImages, setPreviewImages] = useState([])
+    const [existingImages, setExistingImages] = useState([])
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
     const [errors, setErrors] = useState({})
+    const [hasLoaded, setHasLoaded] = useState(false)
+
+    // Reset hasLoaded when id changes
+    useEffect(() => {
+        setHasLoaded(false)
+    }, [id])
+
+    // Load publication data
+    useEffect(() => {
+        const loadPublication = async () => {
+            // Wait for userId to be available
+            if (!userId || !token || !id) {
+                return
+            }
+
+            // Prevent multiple loads
+            if (hasLoaded) {
+                return
+            }
+
+            try {
+                setIsLoading(true)
+                
+                // Check both stores to see if we have a publication with title
+                // Check usePublicationsStore first
+                let publicationFromStore = publications.find(p => p.id === id)
+                // Also check useUserPublicationsStore (for "Mis Avisos")
+                if (!publicationFromStore) {
+                    publicationFromStore = userPublications.find(p => p.id === id)
+                }
+                let storedTitle = publicationFromStore?.propertyTitle || publicationFromStore?.title
+                
+                // Always fetch from API to ensure we have the latest data
+                let publication
+                try {
+                    publication = await fetchPublicationById(id, token)
+                    
+                    // If API returns null propertyTitle but we have a title in store, preserve it
+                    // This handles the case where backend returns null but store has the actual title
+                    // Check both stores after API call
+                    if ((!publication.propertyTitle || publication.propertyTitle === null || publication.propertyTitle === '') 
+                        && storedTitle && storedTitle !== null && storedTitle !== '') {
+                        publication.propertyTitle = storedTitle
+                        publication.title = storedTitle
+                    } else if ((!publication.propertyTitle || publication.propertyTitle === null || publication.propertyTitle === '')) {
+                        // Double-check both stores after API call
+                        const pubFromMainStore = publications.find(p => p.id === id)
+                        const pubFromUserStore = userPublications.find(p => p.id === id)
+                        const titleFromMainStore = pubFromMainStore?.propertyTitle || pubFromMainStore?.title
+                        const titleFromUserStore = pubFromUserStore?.propertyTitle || pubFromUserStore?.title
+                        const finalTitle = titleFromUserStore || titleFromMainStore
+                        
+                        if (finalTitle && finalTitle !== null && finalTitle !== '') {
+                            publication.propertyTitle = finalTitle
+                            publication.title = finalTitle
+                        }
+                    }
+                } catch (fetchError) {
+                    // Try to get from store as fallback
+                    publication = publicationFromStore
+                    if (!publication) {
+                        throw fetchError
+                    }
+                }
+
+                // Check if user is the owner - use same logic as PropertyClientView
+                // This matches the working implementation in PropertyClientView
+                const isOwnPublication = userId && publication?.publisherId && userId === publication.publisherId
+                
+                // If publisherId is null, we'll let the backend handle authorization
+                // The backend will reject the update if the user is not the owner
+                if (!isOwnPublication && publication?.publisherId !== null) {
+                    toast.error('No tienes permiso para editar esta publicación')
+                    navigate('/publications')
+                    return
+                }
+
+                // Pre-fill form data
+                const priceString = publication.price?.replace(/[^0-9]/g, '') || ''
+                
+                // Use propertyTitle directly from backend - never use the auto-generated title
+                // The auto-generated title includes typeName, which we don't want in propertyTitle
+                // propertyTitle should be the raw title from backend, separate from typeName
+                // Handle null explicitly - convert to empty string
+                // If propertyTitle is null/empty, the field will be empty and user can enter a title
+                const cleanTitle = (publication.propertyTitle !== null && publication.propertyTitle !== undefined && publication.propertyTitle !== '') 
+                    ? publication.propertyTitle 
+                    : ''
+                
+                const newFormData = {
+                    title: cleanTitle,
+                    tipo: publication.typeName || '', // Use typeName from publication (should always be available)
+                    propertyDescription: publication.description || '',
+                    propertySize: publication.size || '',
+                    propertyBedrooms: publication.bedrooms || '',
+                    propertyFloors: publication.floors || '',
+                    propertyParking: publication.parking || '',
+                    propertyFurnished: publication.furnished || false,
+                    propertyAddress: publication.address || '',
+                    neighborhood: publication.neighborhood || '',
+                    municipality: publication.municipality || '',
+                    department: publication.department || '',
+                    longitude: publication.coordinates?.lng?.toString() || '',
+                    latitude: publication.coordinates?.lat?.toString() || '',
+                    propertyPrice: priceString
+                }
+                
+                setFormData(newFormData)
+
+                // Set time slots - preserve IDs if they exist
+                if (publication.availableTimes && Array.isArray(publication.availableTimes)) {
+                    // Deep copy to preserve original for comparison
+                    const timesCopy = publication.availableTimes.map(slot => ({ ...slot }))
+                    setTimeSlots(timesCopy)
+                    setOriginalTimeSlots(timesCopy)
+                }
+
+                // Set existing images
+                if (publication.images && publication.images.length > 0) {
+                    setExistingImages(publication.images)
+                }
+
+                setHasLoaded(true)
+            } catch (error) {
+                toast.error('Error al cargar la publicación')
+                navigate('/publications')
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        if (id && token && userId && !hasLoaded) {
+            loadPublication()
+        }
+    }, [id, token, userId, hasLoaded, fetchPublicationById, navigate])
 
     const getDayName = (dayNumber) => {
-        return daysOfWeek.find(day => day.value === dayNumber)?.label || dayNumber
+        return daysOfWeek.find(day => day.value === dayNumber?.toString())?.label || dayNumber
     }
 
     // Validation functions
     const validateField = (fieldId, value, fieldConfig) => {
-        // Check if required field is empty
         if (fieldConfig.required && (!value || value === '' || value === null || value === undefined)) {
             return `${fieldConfig.label} es obligatorio`
         }
 
-        // For non-empty values, perform additional validation
         if (value !== '' && value !== null && value !== undefined) {
-            // Text validation
             if (fieldConfig.type === 'text' || fieldConfig.type === 'textarea') {
                 if (typeof value === 'string' && value.trim().length === 0) {
                     return `${fieldConfig.label} no puede estar vacío`
@@ -141,7 +280,6 @@ export default function CreatePublication() {
                 }
             }
 
-            // Number validation
             if (fieldConfig.type === 'number') {
                 const numValue = parseFloat(value)
                 if (isNaN(numValue)) {
@@ -158,7 +296,6 @@ export default function CreatePublication() {
                 }
             }
 
-            // Price validation
             if (fieldConfig.type === 'price') {
                 const numValue = parseFloat(value.replace(/\D/g, ''))
                 if (isNaN(numValue) || numValue <= 0) {
@@ -187,9 +324,7 @@ export default function CreatePublication() {
                     newErrors.availableTimes = 'Debe agregar al menos un horario disponible'
                 }
             } else if (field.type === 'file') {
-                if (!formData.files || formData.files.length === 0) {
-                    newErrors.files = 'Debe seleccionar al menos una imagen'
-                }
+                // Images are optional for editing
             } else if (field.type === 'map') {
                 if (!formData.latitude || !formData.longitude) {
                     newErrors.locationMap = 'Debe seleccionar una ubicación en el mapa'
@@ -207,7 +342,6 @@ export default function CreatePublication() {
     }
 
     const handleInputChange = (fieldId, value) => {
-        // Clear error for this field when user starts typing
         if (errors[fieldId]) {
             setErrors(prev => {
                 const newErrors = { ...prev }
@@ -216,11 +350,9 @@ export default function CreatePublication() {
             })
         }
 
-        // Convert values to appropriate types
         let processedValue = value
         switch (fieldId) {
             case 'propertySize':
-                // Allow decimals for size, but remove negative signs
                 processedValue = value === '' ? '' : value.replace(/^-/, '')
                 if (processedValue !== '') {
                     processedValue = parseFloat(processedValue) || 0
@@ -229,7 +361,6 @@ export default function CreatePublication() {
             case 'propertyBedrooms':
             case 'propertyFloors':
             case 'propertyParking':
-                // Only integers for these fields, remove negative signs
                 processedValue = value === '' ? '' : value.replace(/^-/, '')
                 if (processedValue !== '') {
                     processedValue = parseInt(processedValue) || 0
@@ -239,7 +370,7 @@ export default function CreatePublication() {
                 processedValue = Boolean(value)
                 break
             case 'propertyPrice':
-                processedValue = value.replace(/\D/g, '') // Keep only digits
+                processedValue = value.replace(/\D/g, '')
                 break
         }
 
@@ -249,27 +380,22 @@ export default function CreatePublication() {
         }))
     }
 
-    // Prevent negative signs from being typed
     const handleKeyDown = (e, fieldId) => {
-        // Prevent minus sign (-) from being typed
         if (e.key === '-') {
             e.preventDefault()
             return
         }
         
-        // For number fields, only allow numbers, backspace, delete, arrow keys, etc.
         if (['propertySize', 'propertyBedrooms', 'propertyFloors', 'propertyParking'].includes(fieldId)) {
             const allowedKeys = [
                 'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
                 'Tab', 'Enter', 'Home', 'End', 'PageUp', 'PageDown'
             ]
             
-            // Allow decimal point only for propertySize
             if (fieldId === 'propertySize' && e.key === '.') {
                 return
             }
             
-            // Allow only numbers and allowed keys
             if (!/^\d$/.test(e.key) && !allowedKeys.includes(e.key)) {
                 e.preventDefault()
             }
@@ -277,19 +403,16 @@ export default function CreatePublication() {
     }
 
     const handleTimeSlotAdd = (dayOfWeek, startTime, endTime) => {
-        // Validate that all required fields are filled
         if (!dayOfWeek || !startTime || !endTime) {
             toast.error('Por favor complete todos los campos del horario')
             return
         }
 
-        // Validate that end time is after start time
         if (startTime >= endTime) {
             toast.error('La hora de fin debe ser posterior a la hora de inicio')
             return
         }
 
-        // Ensure time format is HH:mm:ss
         const formatTime = (time) => {
             if (!time) return '00:00:00'
             return time.length === 5 ? `${time}:00` : time
@@ -301,7 +424,6 @@ export default function CreatePublication() {
             endTime: formatTime(endTime)
         }])
 
-        // Clear the form fields after adding
         setFormData(prev => ({
             ...prev,
             dayOfWeek: '',
@@ -318,7 +440,6 @@ export default function CreatePublication() {
         const files = Array.from(e.target.files)
         
         try {
-            // Convert all images to WebP
             const webpFiles = await Promise.all(
                 files.map(async (file) => {
                     if (file.type === 'image/webp') {
@@ -333,17 +454,14 @@ export default function CreatePublication() {
                 files: webpFiles
             }))
 
-            // Create preview URLs
             const previews = webpFiles.map(file => URL.createObjectURL(file))
             setPreviewImages(previews)
         } catch (error) {
-            console.error('Error converting images:', error)
             toast.error('Error al procesar las imágenes')
         }
     }
 
     const handlePriceChange = (price) => {
-        // Store the raw price value (digits only)
         handleInputChange('propertyPrice', price)
     }
 
@@ -383,7 +501,6 @@ export default function CreatePublication() {
     const handleSubmit = async (e) => {
         e.preventDefault()
         
-        // Validate all steps before submission
         let allValid = true
         for (let i = 0; i < steps.length - 1; i++) {
             const stepValid = validateStep(i)
@@ -403,127 +520,59 @@ export default function CreatePublication() {
 
         try {
             if (!token) {
-                console.error('No token found in auth store')
                 toast.error('Error: No se encontró el token de autenticación')
-                setIsSubmitting(false)
                 return
             }
 
-            const formDataToSend = new FormData()
-
-            // Add basic property information
-            formDataToSend.append('propertyAddress', formData.propertyAddress || '')
-            formDataToSend.append('propertyTitle', formData.title || '')
-            formDataToSend.append('typeName', formData.tipo || '')
-            formDataToSend.append('neighborhood', formData.neighborhood || '')
-            formDataToSend.append('municipality', formData.municipality || '')
-            formDataToSend.append('department', formData.department || '')
-            formDataToSend.append('longitude', formData.longitude || '')
-            formDataToSend.append('latitude', formData.latitude || '')
-            formDataToSend.append('propertySize', formData.propertySize?.toString() || '')
-            formDataToSend.append('propertyBedrooms', formData.propertyBedrooms?.toString() || '')
-            formDataToSend.append('propertyFloors', formData.propertyFloors?.toString() || '')
-            formDataToSend.append('propertyParking', formData.propertyParking?.toString() || '')
-            formDataToSend.append('propertyFurnished', formData.propertyFurnished ? 'true' : 'false')
-            formDataToSend.append('PropertyDescription', formData.propertyDescription || '')
-            formDataToSend.append('PropertyPrice', formatPriceForAPI(formData.propertyPrice || ''))
-
-            // Add available times
-            timeSlots.forEach((slot, index) => {
-                formDataToSend.append(`availableTimes[${index}].dayOfWeek`, slot.dayOfWeek?.toString() || '')
-                formDataToSend.append(`availableTimes[${index}].startTime`, slot.startTime || '')
-                formDataToSend.append(`availableTimes[${index}].endTime`, slot.endTime || '')
-            })
-
-            // Add files if they exist
-            if (formData.files) {
-                for (const file of formData.files) {
-                    formDataToSend.append('files', file)
-                }
-            }
-
-            console.log('Sending form data:', {
-                propertyAddress: formData.propertyAddress,
-                propertyTitle: formData.title,
-                typeName: formData.tipo,
-                neighborhood: formData.neighborhood,
-                municipality: formData.municipality,
-                department: formData.department,
-                longitude: formData.longitude,
-                latitude: formData.latitude,
-                propertySize: formData.propertySize,
-                propertyBedrooms: formData.propertyBedrooms,
-                propertyFloors: formData.propertyFloors,
-                propertyParking: formData.propertyParking,
-                propertyFurnished: formData.propertyFurnished ? 'true' : 'false',
-                PropertyDescription: formData.propertyDescription,
-                PropertyPrice: formatPriceForAPI(formData.propertyPrice || ''),
-                availableTimes: timeSlots,
-                files: formData.files ? formData.files.length : 0
-            })
-
-            const response = await axios.post(
-                `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/publications/create`,
-                formDataToSend,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'multipart/form-data'
-                    },
-                    validateStatus: function (status) {
-                        // Consider status codes less than 500 as success
-                        // This handles cases where the API returns 201, 200, or even 400 with a success message
-                        return status < 500
-                    }
-                }
-            )
-
-            // Check if the response indicates success
-            if (response.status >= 200 && response.status < 300) {
-                console.log('API Success Response:', response.data)
-                toast.success('Publicación creada exitosamente')
-                navigate('/publications')
-            } else {
-                // Handle non-2xx responses that didn't throw an error
-                const errorMessage = response.data?.message || response.data?.error || 'Error al crear la publicación'
-                console.error('API Error Response:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    data: response.data
-                })
-                toast.error(errorMessage)
-                setIsSubmitting(false)
-            }
-        } catch (error) {
-            console.error('Error completo:', error)
+            // Don't format price here - let updatePublication handle it
+            // The price should be a string of digits (e.g., "35000000" for $350,000.00)
             
-            // Check if it's a network error or API error
-            if (error.response) {
-                // API responded with error status
-                const errorMessage = error.response.data?.message || 
-                                   error.response.data?.error || 
-                                   `Error ${error.response.status}: ${error.response.statusText}`
-                console.error('API Error Response:', {
-                    status: error.response.status,
-                    statusText: error.response.statusText,
-                    data: error.response.data
-                })
-                toast.error(errorMessage)
-            } else if (error.request) {
-                // Request was made but no response received
-                console.error('Network Error:', error.request)
-                toast.error('Error de conexión. Por favor verifica tu conexión a internet.')
-            } else {
-                // Something else happened
-                console.error('Error:', error.message)
-                toast.error(error.message || 'Error al crear la publicación')
-            }
+            // Check if availableTimes have changed
+            // Normalize the times for comparison (remove any undefined/null fields)
+            const normalizeTimes = (times) => {
+                return times.map(slot => ({
+                    dayOfWeek: slot.dayOfWeek,
+                    startTime: slot.startTime,
+                    endTime: slot.endTime,
+                    id: slot.id // Include ID in comparison
+                })).sort((a, b) => {
+                    // Sort by dayOfWeek, then startTime for consistent comparison
+                    if (a.dayOfWeek !== b.dayOfWeek) return a.dayOfWeek - b.dayOfWeek;
+                    if (a.startTime !== b.startTime) return a.startTime.localeCompare(b.startTime);
+                    return a.endTime.localeCompare(b.endTime);
+                });
+            };
             
-            console.error('Form Data:', {
+            const normalizedCurrent = normalizeTimes(timeSlots);
+            const normalizedOriginal = normalizeTimes(originalTimeSlots);
+            const timesChanged = JSON.stringify(normalizedCurrent) !== JSON.stringify(normalizedOriginal);
+            
+            const updateData = {
                 ...formData,
-                files: formData.files ? formData.files.length : 0,
-                timeSlots
-            })
+                propertyPrice: formData.propertyPrice || '', // Keep as digits string
+                availableTimes: timeSlots,
+                availableTimesChanged: timesChanged // Flag to indicate if times changed
+            }
+
+            const updatedPublication = await updatePublication(token, id, updateData)
+            
+            // Refresh user publications to update "Mis Avisos" page
+            if (userId && token) {
+                await refreshUserPublications(token, userId)
+            }
+            
+            toast.success('Publicación actualizada exitosamente')
+            
+            // Navigate to home after successful update
+            navigate('/', { replace: true })
+        } catch (error) {
+            // Show more specific error message if available
+            const errorMessage = error.response?.data?.message || 
+                               error.response?.data?.error || 
+                               error.message || 
+                               'Error al actualizar la publicación'
+            
+            toast.error(errorMessage)
         } finally {
             setIsSubmitting(false)
         }
@@ -687,24 +736,48 @@ export default function CreatePublication() {
             case 'file':
                 return (
                     <div className="space-y-4">
-                        <Input
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            required={field.required}
-                            className={fieldError ? "border-red-500" : ""}
-                        />
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {previewImages.map((url, index) => (
-                                <div key={index} className="aspect-square relative">
-                                    <img
-                                        src={url}
-                                        alt={`Preview ${index + 1}`}
-                                        className="w-full h-full object-cover rounded-md"
-                                    />
+                        <div>
+                            <Label>Imágenes existentes</Label>
+                            {existingImages.length > 0 ? (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-2">
+                                    {existingImages.map((url, index) => (
+                                        <div key={index} className="aspect-square relative">
+                                            <img
+                                                src={url}
+                                                alt={`Imagen existente ${index + 1}`}
+                                                className="w-full h-full object-cover rounded-md"
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            ) : (
+                                <p className="text-sm text-muted-foreground mt-2">No hay imágenes existentes</p>
+                            )}
+                        </div>
+                        <div>
+                            <Label htmlFor={field.id}>Agregar nuevas imágenes (opcional)</Label>
+                            <Input
+                                id={field.id}
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                                required={field.required}
+                                className={`mt-2 ${fieldError ? "border-red-500" : ""}`}
+                            />
+                            {previewImages.length > 0 && (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+                                    {previewImages.map((url, index) => (
+                                        <div key={index} className="aspect-square relative">
+                                            <img
+                                                src={url}
+                                                alt={`Preview ${index + 1}`}
+                                                className="w-full h-full object-cover rounded-md"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         {fieldError && (
                             <div className="flex items-center gap-2 text-red-500 text-sm">
@@ -718,6 +791,14 @@ export default function CreatePublication() {
                 return (
                     <div className="space-y-2">
                         <LocationMap
+                            initialPosition={formData.latitude && formData.longitude ? {
+                                lat: parseFloat(formData.latitude),
+                                lng: parseFloat(formData.longitude)
+                            } : null}
+                            initialAddress={{
+                                municipality: formData.municipality || '',
+                                department: formData.department || ''
+                            }}
                             onLocationChange={(locationData) => {
                                 handleInputChange('latitude', locationData.latitude)
                                 handleInputChange('longitude', locationData.longitude)
@@ -774,9 +855,7 @@ export default function CreatePublication() {
                         stepValid = false
                     }
                 } else if (field.type === 'file') {
-                    if (!formData.files || formData.files.length === 0) {
-                        stepValid = false
-                    }
+                    // Images are optional for editing
                 } else if (field.type === 'map') {
                     if (!formData.latitude || !formData.longitude) {
                         stepValid = false
@@ -841,11 +920,20 @@ export default function CreatePublication() {
                     <div className="space-y-4">
                         <h3 className="font-semibold">Imágenes</h3>
                         <div className="grid grid-cols-2 gap-2">
-                            {previewImages.map((url, index) => (
-                                <div key={index} className="aspect-square relative">
+                            {existingImages.map((url, index) => (
+                                <div key={`existing-${index}`} className="aspect-square relative">
                                     <img
                                         src={url}
-                                        alt={`Preview ${index + 1}`}
+                                        alt={`Existente ${index + 1}`}
+                                        className="w-full h-full object-cover rounded-md"
+                                    />
+                                </div>
+                            ))}
+                            {previewImages.map((url, index) => (
+                                <div key={`new-${index}`} className="aspect-square relative">
+                                    <img
+                                        src={url}
+                                        alt={`Nueva ${index + 1}`}
                                         className="w-full h-full object-cover rounded-md"
                                     />
                                 </div>
@@ -857,7 +945,7 @@ export default function CreatePublication() {
                 {!canSubmit && (
                     <div className="flex items-center gap-2 text-red-500 text-sm bg-red-50 p-3 rounded-md">
                         <AlertCircle className="w-4 h-4" />
-                        <span>Por favor complete todos los pasos anteriores antes de crear la publicación</span>
+                        <span>Por favor complete todos los pasos anteriores antes de actualizar la publicación</span>
                     </div>
                 )}
 
@@ -877,8 +965,18 @@ export default function CreatePublication() {
                         className="w-full sm:w-auto"
                         disabled={isSubmitting || !canSubmit}
                     >
-                        {isSubmitting ? 'Creando...' : 'Confirmar y Crear Publicación'}
+                        {isSubmitting ? 'Actualizando...' : 'Confirmar y Actualizar Publicación'}
                     </Button>
+                </div>
+            </div>
+        )
+    }
+
+    if (isLoading) {
+        return (
+            <div className="container mx-auto py-10 px-4 min-h-screen mt-4 pt-[--header-height]">
+                <div className="text-center py-8">
+                    <p>Cargando publicación...</p>
                 </div>
             </div>
         )
@@ -888,8 +986,8 @@ export default function CreatePublication() {
         <div className="container mx-auto py-10 px-4 min-h-screen mt-4 pt-[--header-height]">
             <div className="container mx-auto py-8 px-4">
                 <PageHeader
-                    title="Crear Nuevo Aviso"
-                    description="Complete el formulario paso a paso para crear un nuevo aviso de propiedad."
+                    title="Editar Publicación"
+                    description="Actualiza la información de tu publicación."
                 />
             </div>
 
@@ -969,3 +1067,4 @@ export default function CreatePublication() {
         </div>
     )
 }
+

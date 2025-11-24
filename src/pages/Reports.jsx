@@ -1,15 +1,35 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useReportsStore } from "@/stores/useReportsStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import ReportResolutionDialog from "@/components/ReportResolutionDialog";
+import { 
+  RefreshCw, 
+  Search, 
+  AlertCircle, 
+  CheckCircle2, 
+  XCircle, 
+  Clock,
+  Filter,
+  ExternalLink,
+  Eye
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Reports() {
   const { token } = useAuthStore();
@@ -20,6 +40,9 @@ export default function Reports() {
     reportId: null,
     action: null
   });
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   useEffect(() => {
     if (token) {
@@ -47,6 +70,8 @@ export default function Reports() {
     if (result.success) {
       toast.success(result.message);
       setResolutionDialog({ isOpen: false, reportId: null, action: null });
+      // Refrescar los reportes después de resolver
+      await refreshReports(token);
     } else {
       toast.error(result.message);
     }
@@ -60,145 +85,377 @@ export default function Reports() {
     setResolutionDialog({ isOpen: false, reportId: null, action: null });
   };
 
+  // Calcular estadísticas
+  const stats = useMemo(() => {
+    const pending = reports.filter(r => r.status === 'PENDING').length;
+    const resolved = reports.filter(r => r.status === 'RESOLVED').length;
+    const dismissed = reports.filter(r => r.status === 'DISMISSED').length;
+    return { pending, resolved, dismissed, total: reports.length };
+  }, [reports]);
+
+  // Filtrar reportes
+  const filteredReports = useMemo(() => {
+    let filtered = reports;
+
+    // Filtrar por estado
+    if (statusFilter !== 'ALL') {
+      filtered = filtered.filter(r => r.status === statusFilter);
+    }
+
+    // Filtrar por búsqueda
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(r => 
+        r.reason?.toLowerCase().includes(searchLower) ||
+        r.description?.toLowerCase().includes(searchLower) ||
+        r.reporterName?.toLowerCase().includes(searchLower) ||
+        r.publicationId?.toString().includes(searchLower) ||
+        r.id?.toString().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  }, [reports, statusFilter, searchTerm]);
+
   const getStatusVariant = (status) => {
     switch (status) {
       case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
       case 'RESOLVED':
-        return 'bg-green-100 text-green-800';
-      case 'REJECTED':
-        return 'bg-red-100 text-red-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+      case 'DISMISSED':
+        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
-  if (loading) {
-    return (
-      <div className="container mx-auto py-10 px-4 min-h-screen mt-4 pt-[--header-height]">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      </div>
-    );
-  }
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'PENDING':
+        return <Clock className="h-4 w-4" />;
+      case 'RESOLVED':
+        return <CheckCircle2 className="h-4 w-4" />;
+      case 'DISMISSED':
+        return <XCircle className="h-4 w-4" />;
+      default:
+        return <AlertCircle className="h-4 w-4" />;
+    }
+  };
 
-  if (error) {
+  if (error && !loading) {
     return (
-      <div className="container mx-auto py-10 px-4 min-h-screen mt-4 pt-[--header-height]">
-        <div className="text-red-500 text-center py-10">
-          <p>Error al cargar los reportes: {error}</p>
+      <div className="min-h-screen pt-[--header-height] bg-background">
+        <div className="container mx-auto py-10 px-4">
+          <Card className="border-destructive/50 bg-destructive/10">
+            <CardHeader>
+              <CardTitle className="text-destructive">Error al cargar los reportes</CardTitle>
+              <CardDescription>{error}</CardDescription>
+            </CardHeader>
+            <CardContent>
           <Button 
             variant="outline" 
-            className="mt-4"
             onClick={() => fetchReports(token, currentPage)}
           >
             Reintentar
           </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-10 px-4 min-h-screen mt-4 pt-[--header-height]">
+    <div className="min-h-screen pt-[--header-height] bg-background">
       <div className="container mx-auto py-8 px-4">
-        <div className="flex justify-between items-center mb-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
           <PageHeader
-            title="Reportes"
-            description={`Total de reportes: ${totalElements}`}
-          />
-          <Button variant="outline" onClick={handleRefresh} disabled={loading}>
-            <svg 
-              className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
-              />
-            </svg>
+              title="Panel de Administración - Reportes"
+              description="Gestiona y modera las publicaciones reportadas por los usuarios"
+            />
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh} 
+            disabled={loading}
+            className="w-full sm:w-auto"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
           </Button>
         </div>
 
-        {reports.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-gray-500">No hay reportes disponibles</p>
+        {/* Estadísticas */}
+        {!loading && reports.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total</CardTitle>
+                <AlertCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalElements}</div>
+                <p className="text-xs text-muted-foreground">Reportes en total</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
+                <Clock className="h-4 w-4 text-yellow-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+                <p className="text-xs text-muted-foreground">Requieren atención</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Resueltos</CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{stats.resolved}</div>
+                <p className="text-xs text-muted-foreground">Procesados</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Descartados</CardTitle>
+                <XCircle className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{stats.dismissed}</div>
+                <p className="text-xs text-muted-foreground">Descartados</p>
+              </CardContent>
+            </Card>
           </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {reports.map((report) => (
-              <Card key={report.id} className="hover:shadow-lg transition-shadow">
+        )}
+
+        {/* Filtros y Búsqueda */}
+        <Card className="mb-6">
                 <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg">Reporte #{report.id}</CardTitle>
-                    <Badge className={getStatusVariant(report.status)}>
-                      {report.status === 'PENDING' ? 'PENDIENTE' : 
-                       report.status === 'RESOLVED' ? 'RESUELTO' : 'RECHAZADO'}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    Publicación: {report.publicationId}
-                  </p>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filtros y Búsqueda
+            </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Motivo</p>
-                      <p className="text-sm">{report.reason}</p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por motivo, descripción, reportero o ID..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Descripción</p>
-                      <p className="text-sm">{report.description || 'Sin descripción'}</p>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Filtrar por estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos los estados</SelectItem>
+                  <SelectItem value="PENDING">Pendientes</SelectItem>
+                  <SelectItem value="RESOLVED">Resueltos</SelectItem>
+                  <SelectItem value="DISMISSED">Descartados</SelectItem>
+                </SelectContent>
+              </Select>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Reportado por</p>
-                      <p className="text-sm">{report.reporterName || 'Anónimo'}</p>
+          </CardContent>
+        </Card>
+
+        {/* Tabla de Reportes */}
+        {loading ? (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-20 w-full" />
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Dirección</p>
-                      <p className="text-sm">{report.address || 'No especificada'}</p>
+                ))}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Fecha</p>
-                      <p className="text-sm">
+            </CardContent>
+          </Card>
+        ) : filteredReports.length === 0 ? (
+          <Card>
+            <CardContent className="pt-12 pb-12 text-center">
+              <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-lg font-medium text-muted-foreground">
+                {searchTerm || statusFilter !== 'ALL' 
+                  ? 'No se encontraron reportes con los filtros aplicados' 
+                  : 'No hay reportes disponibles'}
+              </p>
+              {(searchTerm || statusFilter !== 'ALL') && (
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setStatusFilter('ALL');
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Reportes de Publicaciones</CardTitle>
+              <CardDescription>
+                {filteredReports.length} {filteredReports.length === 1 ? 'reporte encontrado' : 'reportes encontrados'}
+                {searchTerm && ` para "${searchTerm}"`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Vista de tabla para desktop */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-4 font-medium text-sm">ID</th>
+                      <th className="text-left p-4 font-medium text-sm">Publicación</th>
+                      <th className="text-left p-4 font-medium text-sm">Motivo</th>
+                      <th className="text-left p-4 font-medium text-sm">Reportado por</th>
+                      <th className="text-left p-4 font-medium text-sm">Fecha</th>
+                      <th className="text-left p-4 font-medium text-sm">Estado</th>
+                      <th className="text-right p-4 font-medium text-sm">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredReports.map((report) => (
+                      <tr key={report.id} className="border-b hover:bg-muted/50 transition-colors">
+                        <td className="p-4 text-sm font-mono">#{report.id}</td>
+                        <td className="p-4 text-sm">
+                          <Link 
+                            to={`/property/${report.publicationId}`}
+                            className="text-primary hover:underline flex items-center gap-1"
+                          >
+                            #{report.publicationId}
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </td>
+                        <td className="p-4 text-sm">
+                          <div className="max-w-xs">
+                            <p className="font-medium truncate">{report.reason}</p>
+                            {report.description && (
+                              <p className="text-muted-foreground text-xs truncate mt-1">
+                                {report.description}
+                              </p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm">{report.reporterName || 'Anónimo'}</td>
+                        <td className="p-4 text-sm text-muted-foreground">
                         {report.reportDate ? (
-                          format(new Date(report.reportDate), 'PPPp', { locale: es })
-                        ) : (
-                          'Fecha no disponible'
+                            format(new Date(report.reportDate), 'dd/MM/yyyy HH:mm', { locale: es })
+                          ) : (
+                            'N/A'
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <Badge className={getStatusVariant(report.status)}>
+                            <span className="flex items-center gap-1">
+                              {getStatusIcon(report.status)}
+                              {report.status === 'PENDING' ? 'PENDIENTE' : 
+                               report.status === 'RESOLVED' ? 'RESUELTO' : 
+                               report.status === 'DISMISSED' ? 'DESCARTADO' : report.status}
+                            </span>
+                          </Badge>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex justify-end gap-2">
+                            <Link to={`/property/${report.publicationId}`}>
+                              <Button variant="ghost" size="sm" className="h-8">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            {report.status === 'PENDING' && (
+                              <>
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm"
+                                  className="h-8"
+                                  onClick={() => openResolutionDialog(report.id, 'DISMISS')}
+                                  disabled={loading}
+                                >
+                                  Rechazar
+                                </Button>
+                                <Button 
+                                  size="sm"
+                                  className="h-8"
+                                  onClick={() => openResolutionDialog(report.id, 'APPROVE')}
+                                  disabled={loading}
+                                >
+                                  Resolver
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Vista de cards para mobile */}
+              <div className="md:hidden space-y-4">
+                {filteredReports.map((report) => (
+                  <Card key={report.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-base">Reporte #{report.id}</CardTitle>
+                          <CardDescription className="mt-1">
+                            Publicación: #{report.publicationId}
+                          </CardDescription>
+                        </div>
+                        <Badge className={getStatusVariant(report.status)}>
+                          <span className="flex items-center gap-1">
+                            {getStatusIcon(report.status)}
+                            {report.status === 'PENDING' ? 'PENDIENTE' : 
+                             report.status === 'RESOLVED' ? 'RESUELTO' : 
+                             report.status === 'DISMISSED' ? 'DESCARTADO' : report.status}
+                          </span>
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Motivo</p>
+                        <p className="text-sm">{report.reason}</p>
+                        {report.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{report.description}</p>
                         )}
-                      </p>
                     </div>
-                    {report.adminFeedback && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Feedback del Admin</p>
-                        <p className="text-sm">{report.adminFeedback}</p>
+                        <p className="text-sm font-medium text-muted-foreground">Reportado por</p>
+                        <p className="text-sm">{report.reporterName || 'Anónimo'}</p>
                       </div>
-                    )}
-                    {report.reviewedAt && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Revisado el</p>
+                        <p className="text-sm font-medium text-muted-foreground">Fecha</p>
                         <p className="text-sm">
-                          {format(new Date(report.reviewedAt), 'PPPp', { locale: es })}
+                          {report.reportDate ? (
+                            format(new Date(report.reportDate), 'dd/MM/yyyy HH:mm', { locale: es })
+                          ) : (
+                            'N/A'
+                          )}
                         </p>
-                      </div>
-                    )}
-                    {report.adminName && (
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Revisado por</p>
-                        <p className="text-sm">{report.adminName}</p>
-                      </div>
-                    )}
                   </div>
                 </CardContent>
-                <CardFooter className="flex justify-end gap-2">
-                  <Link to={`/property/${report.publicationId}`}>
-                    <Button variant="outline" size="sm">
+                    <CardContent className="pt-0">
+                      <div className="flex flex-wrap gap-2">
+                        <Link to={`/property/${report.publicationId}`} className="flex-1">
+                          <Button variant="outline" size="sm" className="w-full">
+                            <Eye className="h-4 w-4 mr-2" />
                       Ver Publicación
                     </Button>
                   </Link>
@@ -207,6 +464,7 @@ export default function Reports() {
                       <Button 
                         variant="destructive" 
                         size="sm"
+                              className="flex-1"
                         onClick={() => openResolutionDialog(report.id, 'DISMISS')}
                         disabled={loading}
                       >
@@ -214,6 +472,7 @@ export default function Reports() {
                       </Button>
                       <Button 
                         size="sm"
+                              className="flex-1"
                         onClick={() => openResolutionDialog(report.id, 'APPROVE')}
                         disabled={loading}
                       >
@@ -221,52 +480,64 @@ export default function Reports() {
                       </Button>
                     </>
                   )}
-                </CardFooter>
+                      </div>
+                    </CardContent>
               </Card>
             ))}
           </div>
+            </CardContent>
+          </Card>
         )}
 
+        {/* Paginación */}
         {reports.length > 0 && (
-          <div className="mt-8 flex flex-col items-center gap-4">
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Mostrando {reports.length} de {totalElements} reportes</span>
+            </div>
+            <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm">
               <span>Mostrar:</span>
-              <select 
-                value={pageSize} 
-                onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
-                className="border rounded px-2 py-1"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
+                <Select 
+                  value={pageSize.toString()} 
+                  onValueChange={(value) => handlePageSizeChange(parseInt(value))}
+                >
+                  <SelectTrigger className="w-[80px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
               <span>por página</span>
             </div>
-            <div className="text-sm text-gray-500">
-              Mostrando {reports.length} de {totalElements} reportes
-            </div>
             {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2">
+                <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
+                    size="sm"
                   onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 0}
+                    disabled={currentPage === 0 || loading}
                 >
                   Anterior
                 </Button>
-                <span className="px-4">
+                  <span className="px-4 text-sm text-muted-foreground">
                   Página {currentPage + 1} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
+                    size="sm"
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages - 1}
+                    disabled={currentPage === totalPages - 1 || loading}
                 >
                   Siguiente
                 </Button>
               </div>
             )}
+            </div>
           </div>
         )}
       </div>

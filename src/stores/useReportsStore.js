@@ -81,7 +81,7 @@ export const useReportsStore = create((set, get) => ({
                 report.id === reportId 
                     ? { 
                         ...report, 
-                        status: action === 'APPROVE' ? 'RESOLVED' : 'REJECTED',
+                        status: action === 'APPROVE' ? 'RESOLVED' : 'DISMISSED',
                         adminFeedback: feedback,
                         reviewedAt: new Date().toISOString()
                     }

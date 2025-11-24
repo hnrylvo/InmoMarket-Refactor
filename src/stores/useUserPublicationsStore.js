@@ -40,12 +40,17 @@ export const useUserPublicationsStore = create((set, get) => ({
                 id: pub.id,
                 imageUrl: pub.propertyImageUrls?.[0] || '/placeholder.svg',
                 images: pub.propertyImageUrls || [],
-                title: pub.propertyTitle || `${pub.typeName} en ${pub.neighborhood}`,
+                title: pub.propertyTitle || '', // Always use propertyTitle, never combine with typeName
+                propertyTitle: pub.propertyTitle || '', // Store propertyTitle separately
+                typeName: pub.typeName || '', // Add typeName for editing
                 price: `$${pub.propertyPrice.toLocaleString()}`,
                 location: `${pub.municipality}, ${pub.department}`,
                 bedrooms: pub.propertyBedrooms,
                 floors: pub.propertyFloors,
                 publisherName: pub.userName,
+                publisherId: pub.userId || pub.ownerId || null, // Add publisherId for edit permission check
+                userEmail: pub.userEmail || null,
+                userPhoneNumber: pub.userPhoneNumber || null,
                 isNew: false,
                 favorited: false,
                 description: pub.propertyDescription,
