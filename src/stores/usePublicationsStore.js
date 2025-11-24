@@ -228,6 +228,7 @@ export const usePublicationsStore = create((set, get) => ({
                 propertyTitle: (pub.propertyTitle !== null && pub.propertyTitle !== undefined) ? pub.propertyTitle : '', // Store propertyTitle separately
                 typeName: pub.typeName || '', // Add typeName for editing
                 price: `$${pub.propertyPrice.toLocaleString()}`,
+                propertyPrice: pub.propertyPrice, // Store original price for editing
                 location: `${pub.municipality}, ${pub.department}`,
                 bedrooms: pub.propertyBedrooms,
                 floors: pub.propertyFloors,
