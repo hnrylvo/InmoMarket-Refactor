@@ -1,127 +1,225 @@
-# InmoMarket Frontend
+InmoMarket – Plataforma Web para Compra y Venta de Propiedades (Frontend)
 
-Aplicación frontend para el mercado inmobiliario desarrollada con React, Vite y Tailwind CSS.
+InmoMarket es una plataforma web diseñada para facilitar la compraventa de bienes raíces mediante un marketplace digital moderno, accesible y sencillo de utilizar. Surge como respuesta a la falta de un espacio confiable donde compradores y vendedores puedan interactuar sin intermediarios, evitando así los riesgos asociados al uso de redes sociales o grupos informales.
 
-## 🚀 Características
+El objetivo principal es ofrecer una plataforma organizada donde cada usuario pueda gestionar sus propiedades, editar su información personal y consultar publicaciones de otros, mientras que el administrador tiene la capacidad de supervisar, moderar y mantener el orden dentro del sistema. Con esto se busca mejorar la transparencia, la seguridad y la eficiencia del proceso inmobiliario.
 
-- **Autenticación unificada**: Sistema de autenticación basado en Zustand para mejor rendimiento
-- **Protección de rutas**: Redirección automática para usuarios autenticados/no autenticados
-- **Manejo de errores**: ErrorBoundary para capturar errores en producción
-- **Responsive Design**: Interfaz adaptativa para móviles y desktop
-- **Tema oscuro/claro**: Soporte para múltiples temas
+¿Para quién está pensada?
 
-## 🛠️ Tecnologías
+Personas que desean vender una propiedad sin depender de agentes, comisiones o plataformas que cobren por publicar.
 
-- React 18
-- Vite
-- Tailwind CSS
-- Zustand (State Management)
-- React Router DOM
-- Lucide React (Iconos)
-- Sonner (Notificaciones)
+Usuarios interesados en comprar, que quieran explorar opciones de forma rápida, comparar información y contactar directamente con los vendedores.
 
-## 📦 Instalación
+Administradores que requieren una herramienta clara para supervisar publicaciones, reportes y perfiles dentro del sistema.
 
-1. Clona el repositorio:
-```bash
-git clone <repository-url>
+¿Qué problema resuelve?
+
+El uso de redes sociales para la compra y venta de propiedades presenta varios inconvenientes: información dispersa, publicaciones inexactas o engañosas, perfiles poco confiables y falta de moderación. Esto dificulta la experiencia tanto para compradores como para vendedores.
+
+InmoMarket soluciona estos problemas al proporcionar:
+
+Un sistema centralizado y ordenado para gestionar publicaciones.
+
+Control total del usuario sobre su información y su contenido.
+
+Perfiles más fáciles de identificar y validar.
+
+Moderación mediante reportes y herramientas administrativas.
+
+Un entorno más seguro y transparente para todas las partes involucradas.
+
+Funcionalidades Principales
+Gestión de usuarios
+
+Registro, inicio de sesión y edición de información personal.
+
+Visualización de perfiles de otros usuarios.
+
+Control individual de datos: cada persona solo puede modificar su propio perfil.
+
+Publicaciones
+
+Crear publicaciones con información detallada de la propiedad.
+
+Editar únicamente las publicaciones propias.
+
+Visualizar todas las publicaciones disponibles en la plataforma mediante un listado general.
+
+Sistema de reportes
+
+Cualquier usuario puede denunciar una publicación por información falsa o por infringir las reglas.
+
+El administrador recibe y gestiona todos los reportes.
+
+El administrador puede modificar el estado de una publicación (activa, suspendida, en revisión).
+
+Roles y Permisos
+Usuarios (Compradores y Vendedores)
+
+Crear publicaciones.
+
+Ver sus propias publicaciones.
+
+Ver publicaciones generales de la plataforma.
+
+Editar únicamente sus publicaciones.
+
+Ver perfiles de otros usuarios.
+
+Modificar su información personal.
+
+Enviar reportes de publicaciones.
+
+Administrador
+
+Ver todos los usuarios registrados.
+
+Ver todas las publicaciones activas o inactivas.
+
+Revisar todas las publicaciones reportadas.
+
+Cambiar el estado de las publicaciones reportadas según corresponda.
+
+InmoMarket Frontend
+
+La aplicación cuenta con un frontend desarrollado con React, Vite y Tailwind CSS. Se implementaron buenas prácticas en el manejo del estado, la autenticación y la organización del código, garantizando una experiencia fluida tanto en escritorio como en dispositivos móviles.
+
+Características del Frontend
+
+Autenticación unificada mediante Zustand.
+
+Protección de rutas con redirecciones automáticas según el estado del usuario.
+
+Manejo de errores mediante ErrorBoundary.
+
+Diseño totalmente responsive.
+
+Soporte para modo claro y oscuro.
+
+Arquitectura modular basada en componentes independientes.
+
+Tecnologías utilizadas
+
+React 18
+
+Vite
+
+Tailwind CSS
+
+Zustand
+
+React Router DOM
+
+Lucide React
+
+Sonner
+
+Requisitos Previos
+Software Necesario
+
+Node.js 18 o superior
+
+npm 8+ o yarn
+
+Verificar instalación:
+
+node -v
+npm -v
+
+Dependencias principales (instaladas automáticamente)
+
+React
+
+Vite
+
+Tailwind CSS
+
+Zustand
+
+React Router DOM
+
+Sonner
+
+Lucide React
+
+Instalación Paso a Paso
+
+Clonar el repositorio:
+
+git clone <url-del-repositorio>
 cd inmomarket-frontend
-```
 
-2. Instala las dependencias:
-```bash
+
+Instalar dependencias:
+
 npm install
-```
 
-3. Configura las variables de entorno:
-```bash
-# Crea un archivo .env.local
-VITE_API_BASE_URL=http://localhost:8080/api
-```
 
-4. Ejecuta el servidor de desarrollo:
-```bash
+Crear archivo de entorno:
+
+cp .env.example .env
+
+
+Configurar la URL del backend en .env:
+
+VITE_API_BASE_URL= https://web-production-06592e.up.railway.app
+
+Ejecución
+Modo desarrollo
 npm run dev
-```
 
-## 🚀 Despliegue en Vercel
 
-### Configuración automática:
-1. Conecta tu repositorio a Vercel
-2. Vercel detectará automáticamente que es una aplicación Vite/React
-3. El archivo `vercel.json` configurará las rutas correctamente
+La aplicación abrirá en:
 
-### Variables de entorno en Vercel:
-- `VITE_API_BASE_URL`: URL de tu API backend
+http://localhost:5173
 
-## 🔧 Problemas Resueltos
+Build de producción
+npm run build
 
-### Problema: Crash en producción al navegar a /login con sesión activa
+Vista previa del build
+npm run preview
 
-**Causa**: 
-- Conflicto entre dos sistemas de autenticación (AuthContext y useAuthStore)
-- Uso incorrecto de hooks de React en stores de Zustand
-- Falta de protección de rutas para usuarios autenticados
+Variables de Entorno (.env.example)
+# URL base del backend de la API
+VITE_API_BASE_URL=https://web-production-06592e.up.railway.app
 
-**Solución implementada**:
-1. **Unificación del sistema de autenticación**: Eliminado AuthContext, usando solo useAuthStore
-2. **Componente ProtectedRoute**: Maneja redirecciones automáticas
-3. **ErrorBoundary**: Captura errores en producción
-4. **Configuración de Vercel**: Manejo correcto de rutas SPA
 
-## 📁 Estructura del Proyecto
+Explicación:
 
-```
+VITE_API_BASE_URL: Punto base donde el frontend realiza las solicitudes HTTP al backend (autenticación, publicaciones, perfiles, etc.).
+
+Estructura del Proyecto
 src/
-├── components/          # Componentes reutilizables
-│   ├── ui/             # Componentes de UI base
-│   ├── ProtectedRoute.jsx  # Protección de rutas
-│   └── ErrorBoundary.jsx   # Manejo de errores
-├── pages/              # Páginas de la aplicación
-├── stores/             # Stores de Zustand
-├── services/           # Servicios de API
-└── contexts/           # Contextos de React (legacy)
-```
+├── components/
+│   ├── ui/
+│   ├── ProtectedRoute.jsx
+│   └── ErrorBoundary.jsx
+├── pages/
+├── stores/
+├── services/
+└── contexts/
 
-## 🔐 Autenticación
+Autenticación
 
-El sistema de autenticación utiliza Zustand con persistencia en localStorage:
+La autenticación se maneja mediante Zustand con persistencia en localStorage:
 
-```javascript
 import { useAuthStore } from '@/stores/useAuthStore';
-
 const { token, login, logout } = useAuthStore();
-```
 
-## 🛡️ Protección de Rutas
+Protección de Rutas
 
-Las rutas están protegidas automáticamente:
+Las rutas públicas (por ejemplo /login o /register) redirigen al inicio si el usuario ya está autenticado.
 
-- **Rutas públicas** (`/login`, `/register`): Redirigen a `/` si el usuario está autenticado
-- **Rutas privadas**: Redirigen a `/login` si el usuario no está autenticado
+Las rutas privadas requieren un token válido para ingresar.
 
-## 🐛 Debugging
+Contribución
 
-Para debugging en producción:
-1. Revisa la consola del navegador
-2. El ErrorBoundary capturará errores y mostrará una UI de fallback
-3. Los logs de autenticación se muestran en la consola
+Fork del repositorio
 
-## 📝 Scripts Disponibles
+Crear rama con la nueva funcionalidad
 
-- `npm run dev`: Servidor de desarrollo
-- `npm run build`: Build de producción
-- `npm run preview`: Preview del build
-- `npm run lint`: Linting del código
+Realizar los commits
 
-## 🤝 Contribución
+Subir la rama
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT.
+Abrir un Pull Request
