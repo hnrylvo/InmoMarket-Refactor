@@ -228,6 +228,7 @@ export const usePublicationsStore = create((set, get) => ({
                 propertyTitle: (pub.propertyTitle !== null && pub.propertyTitle !== undefined) ? pub.propertyTitle : '', // Store propertyTitle separately
                 typeName: pub.typeName || '', // Add typeName for editing
                 price: `$${pub.propertyPrice.toLocaleString()}`,
+                propertyPrice: pub.propertyPrice, // Store original price for editing
                 location: `${pub.municipality}, ${pub.department}`,
                 bedrooms: pub.propertyBedrooms,
                 floors: pub.propertyFloors,
@@ -372,8 +373,8 @@ export const usePublicationsStore = create((set, get) => ({
             formDataToSend.append('propertyFloors', formData.propertyFloors?.toString() || '');
             formDataToSend.append('propertyParking', formData.propertyParking?.toString() || '');
             formDataToSend.append('propertyFurnished', formData.propertyFurnished ? 'true' : 'false');
-            formDataToSend.append('PropertyDescription', formData.propertyDescription || '');
-            formDataToSend.append('PropertyPrice', formatPriceForAPI(formData.propertyPrice || ''));
+            formDataToSend.append('propertyDescription', formData.propertyDescription || '');
+            formDataToSend.append('propertyPrice', formatPriceForAPI(formData.propertyPrice || ''));
 
             // Add available times - handle the orphan deletion issue
             // The backend has issues with orphan deletion when updating collections
@@ -437,8 +438,8 @@ export const usePublicationsStore = create((set, get) => ({
                 propertyFloors: formData.propertyFloors,
                 propertyParking: formData.propertyParking,
                 propertyFurnished: formData.propertyFurnished ? 'true' : 'false',
-                PropertyDescription: formData.propertyDescription,
-                PropertyPrice: formatPriceForAPI(formData.propertyPrice || ''),
+                propertyDescription: formData.propertyDescription,
+                propertyPrice: formatPriceForAPI(formData.propertyPrice || ''),
                 availableTimes: formData.availableTimes,
                 files: formData.files ? formData.files.length : 0
             });

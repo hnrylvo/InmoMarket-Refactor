@@ -425,8 +425,8 @@ export default function CreatePublication() {
             formDataToSend.append('propertyFloors', formData.propertyFloors?.toString() || '')
             formDataToSend.append('propertyParking', formData.propertyParking?.toString() || '')
             formDataToSend.append('propertyFurnished', formData.propertyFurnished ? 'true' : 'false')
-            formDataToSend.append('PropertyDescription', formData.propertyDescription || '')
-            formDataToSend.append('PropertyPrice', formatPriceForAPI(formData.propertyPrice || ''))
+            formDataToSend.append('propertyDescription', formData.propertyDescription || '')
+            formDataToSend.append('propertyPrice', formatPriceForAPI(formData.propertyPrice || ''))
 
             // Add available times
             timeSlots.forEach((slot, index) => {
@@ -456,8 +456,8 @@ export default function CreatePublication() {
                 propertyFloors: formData.propertyFloors,
                 propertyParking: formData.propertyParking,
                 propertyFurnished: formData.propertyFurnished ? 'true' : 'false',
-                PropertyDescription: formData.propertyDescription,
-                PropertyPrice: formatPriceForAPI(formData.propertyPrice || ''),
+                propertyDescription: formData.propertyDescription,
+                propertyPrice: formatPriceForAPI(formData.propertyPrice || ''),
                 availableTimes: timeSlots,
                 files: formData.files ? formData.files.length : 0
             })
@@ -471,20 +471,29 @@ export default function CreatePublication() {
                         'Content-Type': 'multipart/form-data'
                     },
                     validateStatus: function (status) {
-                        // Consider status codes less than 500 as success
-                        // This handles cases where the API returns 201, 200, or even 400 with a success message
-                        return status < 500
+                        // Accept all status codes including 500 to check response data
+                        // This handles cases where the API creates the publication but returns 500
+                        return true
                     }
                 }
             )
 
-            // Check if the response indicates success
-            if (response.status >= 200 && response.status < 300) {
+            // Check if the response indicates success (2xx status) or if publication was created despite error
+            const isSuccessStatus = response.status >= 200 && response.status < 300
+            const hasPublicationId = response.data?.id || response.data?.publicationId || response.data?.publication?.id
+            const wasCreated = isSuccessStatus || hasPublicationId
+
+            if (wasCreated) {
                 console.log('API Success Response:', response.data)
-                toast.success('Publicación creada exitosamente')
+                if (!isSuccessStatus) {
+                    // Publication was created but API returned error status
+                    toast.success('Publicación creada exitosamente (con advertencias)')
+                } else {
+                    toast.success('Publicación creada exitosamente')
+                }
                 navigate('/publications')
             } else {
-                // Handle non-2xx responses that didn't throw an error
+                // Handle non-success responses
                 const errorMessage = response.data?.message || response.data?.error || 'Error al crear la publicación'
                 console.error('API Error Response:', {
                     status: response.status,
@@ -499,24 +508,39 @@ export default function CreatePublication() {
             
             // Check if it's a network error or API error
             if (error.response) {
-                // API responded with error status
-                const errorMessage = error.response.data?.message || 
-                                   error.response.data?.error || 
-                                   `Error ${error.response.status}: ${error.response.statusText}`
-                console.error('API Error Response:', {
-                    status: error.response.status,
-                    statusText: error.response.statusText,
-                    data: error.response.data
-                })
-                toast.error(errorMessage)
+                // Check if publication was created despite the error
+                const hasPublicationId = error.response.data?.id || 
+                                       error.response.data?.publicationId || 
+                                       error.response.data?.publication?.id
+                
+                if (hasPublicationId) {
+                    // Publication was created even though there was an error
+                    console.log('Publication created despite error:', error.response.data)
+                    toast.success('Publicación creada exitosamente (con advertencias)')
+                    navigate('/publications')
+                } else {
+                    // API responded with error status and publication was not created
+                    const errorMessage = error.response.data?.message || 
+                                       error.response.data?.error || 
+                                       `Error ${error.response.status}: ${error.response.statusText}`
+                    console.error('API Error Response:', {
+                        status: error.response.status,
+                        statusText: error.response.statusText,
+                        data: error.response.data
+                    })
+                    toast.error(errorMessage)
+                    setIsSubmitting(false)
+                }
             } else if (error.request) {
                 // Request was made but no response received
                 console.error('Network Error:', error.request)
                 toast.error('Error de conexión. Por favor verifica tu conexión a internet.')
+                setIsSubmitting(false)
             } else {
                 // Something else happened
                 console.error('Error:', error.message)
                 toast.error(error.message || 'Error al crear la publicación')
+                setIsSubmitting(false)
             }
             
             console.error('Form Data:', {
