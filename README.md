@@ -4,6 +4,7 @@ InmoMarket es una plataforma web diseñada para facilitar la compraventa de bien
 
 El objetivo principal es ofrecer una plataforma organizada donde cada usuario pueda gestionar sus propiedades, editar su información personal y consultar publicaciones de otros, mientras que el administrador tiene la capacidad de supervisar, moderar y mantener el orden dentro del sistema. Con esto se busca mejorar la transparencia, la seguridad y la eficiencia del proceso inmobiliario.
 
+Link de la web: https://inmo-market.vercel.app/
 ## ¿Para quién está pensada?
 
 - Personas que desean vender una propiedad sin depender de agentes, comisiones o plataformas que cobren por publicar.
