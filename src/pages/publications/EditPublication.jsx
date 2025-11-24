@@ -206,46 +206,46 @@ export default function EditPublication() {
                 // PriceInput expects a string of digits where last 2 digits are cents
                 // API returns propertyPrice as a number in dollars (e.g., 230000.00 = $230,000.00)
                 let priceString = ''
-                console.log('EditPublication - Loading price:', {
-                    propertyPrice: publication.propertyPrice,
-                    propertyPriceType: typeof publication.propertyPrice,
-                    price: publication.price
-                })
                 
                 if (publication.propertyPrice !== undefined && publication.propertyPrice !== null) {
                     // propertyPrice comes from API as a number in dollars (e.g., 230000.00 = $230,000.00)
-                    // Convert to cents: multiply by 100
-                    // Handle both number and string types, ensure we parse correctly
+                    // Always convert to cents by multiplying by 100
                     let priceNum
                     if (typeof publication.propertyPrice === 'string') {
-                        // Remove any formatting and parse
+                        // Remove any formatting and parse, preserving decimal point
                         const cleaned = publication.propertyPrice.replace(/[^0-9.]/g, '')
                         priceNum = parseFloat(cleaned)
                     } else {
                         priceNum = Number(publication.propertyPrice)
                     }
                     
-                    console.log('EditPublication - Parsed price:', {
-                        original: publication.propertyPrice,
-                        priceNum,
-                        priceNumTimes100: priceNum * 100
-                    })
-                    
-                    if (!isNaN(priceNum) && priceNum > 0) {
-                        // Multiply by 100 to convert dollars to cents
-                        // Use Math.round to avoid floating point issues
+                    // Ensure we have a valid number
+                    if (!isNaN(priceNum) && priceNum >= 0) {
+                        // Always multiply by 100 to convert dollars to cents
+                        // This handles both whole numbers (230000 -> 23000000) and decimals (230000.00 -> 23000000)
                         const priceInCents = Math.round(priceNum * 100)
                         priceString = priceInCents.toString()
-                        console.log('EditPublication - Final price string:', priceString)
+                        
+                        // Debug log to help identify the issue
+                        console.log('EditPublication - Price conversion:', {
+                            original: publication.propertyPrice,
+                            originalType: typeof publication.propertyPrice,
+                            parsed: priceNum,
+                            inCents: priceInCents,
+                            finalString: priceString,
+                            expectedDisplay: `$${(priceInCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        })
                     }
                 } else if (publication.price) {
                     // Fallback: parse from formatted price string (e.g., "$350,000")
-                    // Remove all non-digits
+                    // Remove all non-digits to get the dollar amount
                     const digitsOnly = publication.price.replace(/[^0-9]/g, '')
-                    // The formatted price represents dollars, so we need to add 00 for cents
+                    // Convert dollars to cents by adding 00
                     // For example, "$350,000" -> "350000" -> "35000000" (350000 dollars + 00 cents)
-                    priceString = digitsOnly.length > 0 ? (digitsOnly + '00') : ''
-                    console.log('EditPublication - Fallback price string:', priceString)
+                    if (digitsOnly.length > 0) {
+                        const dollars = parseInt(digitsOnly, 10)
+                        priceString = (dollars * 100).toString()
+                    }
                 }
                 
                 // Use propertyTitle directly from backend - never use the auto-generated title
