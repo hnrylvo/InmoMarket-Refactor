@@ -203,21 +203,49 @@ export default function EditPublication() {
 
                 // Pre-fill form data
                 // Convert price to cents format (string of digits where last 2 are cents)
-                // If propertyPrice exists (original number), use it; otherwise parse from formatted price
+                // PriceInput expects a string of digits where last 2 digits are cents
+                // API returns propertyPrice as a number in dollars (e.g., 230000.00 = $230,000.00)
                 let priceString = ''
+                console.log('EditPublication - Loading price:', {
+                    propertyPrice: publication.propertyPrice,
+                    propertyPriceType: typeof publication.propertyPrice,
+                    price: publication.price
+                })
+                
                 if (publication.propertyPrice !== undefined && publication.propertyPrice !== null) {
-                    // propertyPrice is a number (e.g., 350000.00 or 350000)
-                    // Convert to cents: multiply by 100 and convert to string
-                    const priceInCents = Math.round(publication.propertyPrice * 100)
-                    priceString = priceInCents.toString()
+                    // propertyPrice comes from API as a number in dollars (e.g., 230000.00 = $230,000.00)
+                    // Convert to cents: multiply by 100
+                    // Handle both number and string types, ensure we parse correctly
+                    let priceNum
+                    if (typeof publication.propertyPrice === 'string') {
+                        // Remove any formatting and parse
+                        const cleaned = publication.propertyPrice.replace(/[^0-9.]/g, '')
+                        priceNum = parseFloat(cleaned)
+                    } else {
+                        priceNum = Number(publication.propertyPrice)
+                    }
+                    
+                    console.log('EditPublication - Parsed price:', {
+                        original: publication.propertyPrice,
+                        priceNum,
+                        priceNumTimes100: priceNum * 100
+                    })
+                    
+                    if (!isNaN(priceNum) && priceNum > 0) {
+                        // Multiply by 100 to convert dollars to cents
+                        // Use Math.round to avoid floating point issues
+                        const priceInCents = Math.round(priceNum * 100)
+                        priceString = priceInCents.toString()
+                        console.log('EditPublication - Final price string:', priceString)
+                    }
                 } else if (publication.price) {
                     // Fallback: parse from formatted price string (e.g., "$350,000")
-                    // Remove all non-digits and assume it's already in the correct format
-                    // But we need to add 00 for cents if not present
+                    // Remove all non-digits
                     const digitsOnly = publication.price.replace(/[^0-9]/g, '')
-                    // If the price doesn't have cents (length suggests it's missing the last 2 digits), add 00
-                    // For example, if price is 350000, it should be 35000000 (350000 dollars + 00 cents)
-                    priceString = digitsOnly.length > 0 ? digitsOnly.padEnd(digitsOnly.length + 2, '0') : ''
+                    // The formatted price represents dollars, so we need to add 00 for cents
+                    // For example, "$350,000" -> "350000" -> "35000000" (350000 dollars + 00 cents)
+                    priceString = digitsOnly.length > 0 ? (digitsOnly + '00') : ''
+                    console.log('EditPublication - Fallback price string:', priceString)
                 }
                 
                 // Use propertyTitle directly from backend - never use the auto-generated title
