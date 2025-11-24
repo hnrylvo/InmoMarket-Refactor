@@ -202,7 +202,23 @@ export default function EditPublication() {
                 }
 
                 // Pre-fill form data
-                const priceString = publication.price?.replace(/[^0-9]/g, '') || ''
+                // Convert price to cents format (string of digits where last 2 are cents)
+                // If propertyPrice exists (original number), use it; otherwise parse from formatted price
+                let priceString = ''
+                if (publication.propertyPrice !== undefined && publication.propertyPrice !== null) {
+                    // propertyPrice is a number (e.g., 350000.00 or 350000)
+                    // Convert to cents: multiply by 100 and convert to string
+                    const priceInCents = Math.round(publication.propertyPrice * 100)
+                    priceString = priceInCents.toString()
+                } else if (publication.price) {
+                    // Fallback: parse from formatted price string (e.g., "$350,000")
+                    // Remove all non-digits and assume it's already in the correct format
+                    // But we need to add 00 for cents if not present
+                    const digitsOnly = publication.price.replace(/[^0-9]/g, '')
+                    // If the price doesn't have cents (length suggests it's missing the last 2 digits), add 00
+                    // For example, if price is 350000, it should be 35000000 (350000 dollars + 00 cents)
+                    priceString = digitsOnly.length > 0 ? digitsOnly.padEnd(digitsOnly.length + 2, '0') : ''
+                }
                 
                 // Use propertyTitle directly from backend - never use the auto-generated title
                 // The auto-generated title includes typeName, which we don't want in propertyTitle
