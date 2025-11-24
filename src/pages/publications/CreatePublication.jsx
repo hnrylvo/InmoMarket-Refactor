@@ -425,8 +425,8 @@ export default function CreatePublication() {
             formDataToSend.append('propertyFloors', formData.propertyFloors?.toString() || '')
             formDataToSend.append('propertyParking', formData.propertyParking?.toString() || '')
             formDataToSend.append('propertyFurnished', formData.propertyFurnished ? 'true' : 'false')
-            formDataToSend.append('PropertyDescription', formData.propertyDescription || '')
-            formDataToSend.append('PropertyPrice', formatPriceForAPI(formData.propertyPrice || ''))
+            formDataToSend.append('propertyDescription', formData.propertyDescription || '')
+            formDataToSend.append('propertyPrice', formatPriceForAPI(formData.propertyPrice || ''))
 
             // Add available times
             timeSlots.forEach((slot, index) => {
@@ -456,8 +456,8 @@ export default function CreatePublication() {
                 propertyFloors: formData.propertyFloors,
                 propertyParking: formData.propertyParking,
                 propertyFurnished: formData.propertyFurnished ? 'true' : 'false',
-                PropertyDescription: formData.propertyDescription,
-                PropertyPrice: formatPriceForAPI(formData.propertyPrice || ''),
+                propertyDescription: formData.propertyDescription,
+                propertyPrice: formatPriceForAPI(formData.propertyPrice || ''),
                 availableTimes: timeSlots,
                 files: formData.files ? formData.files.length : 0
             })
