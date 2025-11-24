@@ -187,25 +187,13 @@ export const usePublicationsStore = create((set, get) => ({
                 headers['Authorization'] = `Bearer ${token}`;
             }
             
-            console.log('fetchPublicationById - Fetching publication:', id)
             const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/publications/publicationById?publicationId=${id}`
-            console.log('fetchPublicationById - URL:', apiUrl)
             
             const response = await axios.get(apiUrl, {
                 headers
             });
 
             const pub = response.data;
-            
-            // Debug: log the raw API response to see what fields are available
-            console.log('fetchPublicationById - Raw API response propertyTitle:', pub.propertyTitle);
-            console.log('fetchPublicationById - Raw API response title field:', pub.title);
-            console.log('fetchPublicationById - All fields:', Object.keys(pub));
-            console.log('fetchPublicationById - Raw API response:', pub)
-            console.log('fetchPublicationById - Available fields:', Object.keys(pub))
-            console.log('fetchPublicationById - userId:', pub.userId)
-            console.log('fetchPublicationById - ownerId:', pub.ownerId)
-            console.log('fetchPublicationById - user:', pub.user)
             
             // Try multiple possible field names for the owner ID
             const publisherId = pub.userId || 
@@ -215,8 +203,6 @@ export const usePublicationsStore = create((set, get) => ({
                                pub.publisherId ||
                                (pub.user && typeof pub.user === 'object' ? pub.user.id : null) ||
                                null;
-            
-            console.log('fetchPublicationById - Resolved publisherId:', publisherId)
             
             const transformedPublication = {
                 id: pub.id,
@@ -259,7 +245,6 @@ export const usePublicationsStore = create((set, get) => ({
                 if (existingPublication && (!transformedPublication.propertyTitle || transformedPublication.propertyTitle === null || transformedPublication.propertyTitle === '')) {
                     const existingTitle = existingPublication.propertyTitle || existingPublication.title;
                     if (existingTitle && existingTitle !== null && existingTitle !== '') {
-                        console.log('fetchPublicationById - Preserving existing title from store:', existingTitle);
                         transformedPublication.propertyTitle = existingTitle;
                         transformedPublication.title = existingTitle;
                     }
@@ -282,16 +267,11 @@ export const usePublicationsStore = create((set, get) => ({
             }
 
             // Log detailed error information
-            console.error('fetchPublicationById - Error details:', {
-                status: error.response?.status,
-                statusText: error.response?.statusText,
-                data: error.response?.data,
-                message: error.message,
-                url: error.config?.url
-            });
-            
-            if (error.response?.data) {
-                console.error('fetchPublicationById - Full error response:', JSON.stringify(error.response.data, null, 2));
+            // Log error information for debugging
+            if (error.response) {
+                console.error('fetchPublicationById error:', error.response.status, error.response.data?.message || error.response.data?.error || error.message);
+            } else {
+                console.error('fetchPublicationById error:', error.message);
             }
 
             set({ 
@@ -360,7 +340,6 @@ export const usePublicationsStore = create((set, get) => ({
             const propertyTitle = (formData.title && typeof formData.title === 'string') 
                 ? formData.title.trim() 
                 : '';
-            console.log('updatePublication - propertyTitle to send:', propertyTitle, 'type:', typeof propertyTitle);
             formDataToSend.append('propertyTitle', propertyTitle);
             formDataToSend.append('typeName', formData.tipo || '');
             formDataToSend.append('neighborhood', formData.neighborhood || '');
@@ -383,19 +362,13 @@ export const usePublicationsStore = create((set, get) => ({
             const availableTimes = formData.availableTimes || [];
             const timesChanged = formData.availableTimesChanged !== false; // Default to true if not specified
             
-            console.log('updatePublication - availableTimes structure:', availableTimes);
-            console.log('updatePublication - timesChanged flag:', timesChanged);
-            
             // Only send availableTimes if they have changed
             // This avoids the orphan deletion issue when times haven't changed
             if (timesChanged && availableTimes.length > 0) {
                 availableTimes.forEach((slot, index) => {
-                    console.log(`updatePublication - Processing slot ${index}:`, slot);
-                    
                     // Always include ID if it exists - this helps the backend identify existing records
                     if (slot.id !== undefined && slot.id !== null) {
                         formDataToSend.append(`availableTimes[${index}].id`, slot.id.toString());
-                        console.log(`updatePublication - Added ID for slot ${index}:`, slot.id);
                     }
                     
                     // Send the time slot data
@@ -407,11 +380,7 @@ export const usePublicationsStore = create((set, get) => ({
                 // If times changed to empty, we need to tell the backend to clear them
                 // But this might trigger the orphan deletion issue
                 // Try sending an empty indicator
-                console.log('updatePublication - Times changed to empty, sending empty array indicator');
                 formDataToSend.append('availableTimes', '[]');
-            } else {
-                // Times haven't changed, don't send them to avoid orphan deletion issue
-                console.log('updatePublication - Times haven\'t changed, not sending to avoid orphan deletion issue');
             }
 
             // Add files if they exist (new images)
@@ -421,34 +390,6 @@ export const usePublicationsStore = create((set, get) => ({
                 }
             }
 
-            // Debug: Log what we're sending
-            const propertyTitleToSend = formData.title ? formData.title.trim() : '';
-            console.log('updatePublication - Sending form data:', {
-                propertyAddress: formData.propertyAddress,
-                propertyTitle: propertyTitleToSend,
-                propertyTitleOriginal: formData.title,
-                typeName: formData.tipo,
-                neighborhood: formData.neighborhood,
-                municipality: formData.municipality,
-                department: formData.department,
-                longitude: formData.longitude,
-                latitude: formData.latitude,
-                propertySize: formData.propertySize,
-                propertyBedrooms: formData.propertyBedrooms,
-                propertyFloors: formData.propertyFloors,
-                propertyParking: formData.propertyParking,
-                propertyFurnished: formData.propertyFurnished ? 'true' : 'false',
-                propertyDescription: formData.propertyDescription,
-                propertyPrice: formatPriceForAPI(formData.propertyPrice || ''),
-                availableTimes: formData.availableTimes,
-                files: formData.files ? formData.files.length : 0
-            });
-
-            // Log FormData contents for debugging
-            console.log('updatePublication - FormData contents:');
-            for (let pair of formDataToSend.entries()) {
-                console.log('  ', pair[0], ':', pair[1]);
-            }
 
             const response = await axios.put(
                 `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/publications/${publicationId}`,
@@ -519,31 +460,11 @@ export const usePublicationsStore = create((set, get) => ({
                 useAuthStore.getState().logout();
             }
 
-            // Log detailed error information
-            console.error('updatePublication - Error details:', {
-                status: error.response?.status,
-                statusText: error.response?.statusText,
-                data: error.response?.data,
-                message: error.message,
-                config: {
-                    url: error.config?.url,
-                    method: error.config?.method,
-                    headers: error.config?.headers
-                }
-            });
-            
-            // Log the full error response data
-            if (error.response?.data) {
-                console.error('updatePublication - Full error response data:', JSON.stringify(error.response.data, null, 2));
-            }
-            
-            // Log the error message if available
-            if (error.response?.data?.message) {
-                console.error('updatePublication - Error message:', error.response.data.message);
-            }
-            
-            if (error.response?.data?.error) {
-                console.error('updatePublication - Error:', error.response.data.error);
+            // Log error information for debugging
+            if (error.response) {
+                console.error('updatePublication error:', error.response.status, error.response.data?.message || error.response.data?.error || error.message);
+            } else {
+                console.error('updatePublication error:', error.message);
             }
 
             set({ 

@@ -442,26 +442,6 @@ export default function CreatePublication() {
                 }
             }
 
-            console.log('Sending form data:', {
-                propertyAddress: formData.propertyAddress,
-                propertyTitle: formData.title,
-                typeName: formData.tipo,
-                neighborhood: formData.neighborhood,
-                municipality: formData.municipality,
-                department: formData.department,
-                longitude: formData.longitude,
-                latitude: formData.latitude,
-                propertySize: formData.propertySize,
-                propertyBedrooms: formData.propertyBedrooms,
-                propertyFloors: formData.propertyFloors,
-                propertyParking: formData.propertyParking,
-                propertyFurnished: formData.propertyFurnished ? 'true' : 'false',
-                propertyDescription: formData.propertyDescription,
-                propertyPrice: formatPriceForAPI(formData.propertyPrice || ''),
-                availableTimes: timeSlots,
-                files: formData.files ? formData.files.length : 0
-            })
-
             const response = await axios.post(
                 `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/publications/create`,
                 formDataToSend,
@@ -484,7 +464,6 @@ export default function CreatePublication() {
             const wasCreated = isSuccessStatus || hasPublicationId
 
             if (wasCreated) {
-                console.log('API Success Response:', response.data)
                 if (!isSuccessStatus) {
                     // Publication was created but API returned error status
                     toast.success('Publicación creada exitosamente (con advertencias)')
@@ -495,17 +474,11 @@ export default function CreatePublication() {
             } else {
                 // Handle non-success responses
                 const errorMessage = response.data?.message || response.data?.error || 'Error al crear la publicación'
-                console.error('API Error Response:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    data: response.data
-                })
+                console.error('CreatePublication error:', response.status, errorMessage)
                 toast.error(errorMessage)
                 setIsSubmitting(false)
             }
         } catch (error) {
-            console.error('Error completo:', error)
-            
             // Check if it's a network error or API error
             if (error.response) {
                 // Check if publication was created despite the error
@@ -515,7 +488,6 @@ export default function CreatePublication() {
                 
                 if (hasPublicationId) {
                     // Publication was created even though there was an error
-                    console.log('Publication created despite error:', error.response.data)
                     toast.success('Publicación creada exitosamente (con advertencias)')
                     navigate('/publications')
                 } else {
@@ -523,31 +495,21 @@ export default function CreatePublication() {
                     const errorMessage = error.response.data?.message || 
                                        error.response.data?.error || 
                                        `Error ${error.response.status}: ${error.response.statusText}`
-                    console.error('API Error Response:', {
-                        status: error.response.status,
-                        statusText: error.response.statusText,
-                        data: error.response.data
-                    })
+                    console.error('CreatePublication error:', error.response.status, errorMessage)
                     toast.error(errorMessage)
                     setIsSubmitting(false)
                 }
             } else if (error.request) {
                 // Request was made but no response received
-                console.error('Network Error:', error.request)
+                console.error('CreatePublication network error:', error.message)
                 toast.error('Error de conexión. Por favor verifica tu conexión a internet.')
                 setIsSubmitting(false)
             } else {
                 // Something else happened
-                console.error('Error:', error.message)
+                console.error('CreatePublication error:', error.message)
                 toast.error(error.message || 'Error al crear la publicación')
                 setIsSubmitting(false)
             }
-            
-            console.error('Form Data:', {
-                ...formData,
-                files: formData.files ? formData.files.length : 0,
-                timeSlots
-            })
         } finally {
             setIsSubmitting(false)
         }

@@ -209,32 +209,27 @@ export default function EditPublication() {
                 
                 if (publication.propertyPrice !== undefined && publication.propertyPrice !== null) {
                     // propertyPrice comes from API as a number in dollars (e.g., 230000.00 = $230,000.00)
-                    // Always convert to cents by multiplying by 100
-                    let priceNum
-                    if (typeof publication.propertyPrice === 'string') {
-                        // Remove any formatting and parse, preserving decimal point
-                        const cleaned = publication.propertyPrice.replace(/[^0-9.]/g, '')
-                        priceNum = parseFloat(cleaned)
-                    } else {
-                        priceNum = Number(publication.propertyPrice)
-                    }
+                    // Convert to string first to avoid floating point precision issues
+                    let priceStr = String(publication.propertyPrice)
                     
-                    // Ensure we have a valid number
-                    if (!isNaN(priceNum) && priceNum >= 0) {
-                        // Always multiply by 100 to convert dollars to cents
-                        // This handles both whole numbers (230000 -> 23000000) and decimals (230000.00 -> 23000000)
-                        const priceInCents = Math.round(priceNum * 100)
-                        priceString = priceInCents.toString()
-                        
-                        // Debug log to help identify the issue
-                        console.log('EditPublication - Price conversion:', {
-                            original: publication.propertyPrice,
-                            originalType: typeof publication.propertyPrice,
-                            parsed: priceNum,
-                            inCents: priceInCents,
-                            finalString: priceString,
-                            expectedDisplay: `$${(priceInCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        })
+                    // Remove any formatting characters but keep decimal point
+                    priceStr = priceStr.replace(/[^0-9.]/g, '')
+                    
+                    // Split into integer and decimal parts to avoid floating point errors
+                    const parts = priceStr.split('.')
+                    const integerPart = parts[0] || '0'
+                    const decimalPart = parts[1] || '00'
+                    
+                    // Pad decimal part to 2 digits
+                    const paddedDecimal = decimalPart.padEnd(2, '0').slice(0, 2)
+                    
+                    // Combine: integer part + decimal part = total cents
+                    // Example: "230000" + "00" = "23000000" (230000 dollars + 00 cents)
+                    priceString = integerPart + paddedDecimal
+                    
+                    // Remove leading zeros but keep at least 3 digits (for "0.00")
+                    if (priceString.length < 3) {
+                        priceString = priceString.padStart(3, '0')
                     }
                 } else if (publication.price) {
                     // Fallback: parse from formatted price string (e.g., "$350,000")
@@ -243,8 +238,7 @@ export default function EditPublication() {
                     // Convert dollars to cents by adding 00
                     // For example, "$350,000" -> "350000" -> "35000000" (350000 dollars + 00 cents)
                     if (digitsOnly.length > 0) {
-                        const dollars = parseInt(digitsOnly, 10)
-                        priceString = (dollars * 100).toString()
+                        priceString = digitsOnly + '00'
                     }
                 }
                 
