@@ -49,6 +49,8 @@ export const useUserPublicationsStore = create((set, get) => ({
                 floors: pub.propertyFloors,
                 publisherName: pub.userName,
                 publisherId: pub.userId || pub.ownerId || null, // Add publisherId for edit permission check
+                userEmail: pub.userEmail || null,
+                userPhoneNumber: pub.userPhoneNumber || null,
                 isNew: false,
                 favorited: false,
                 description: pub.propertyDescription,

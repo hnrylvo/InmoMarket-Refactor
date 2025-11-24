@@ -57,6 +57,8 @@ export const useAdminPublicationsStore = create((set, get) => ({
                 floors: pub.propertyFloors,
                 publisherName: pub.userName,
                 publisherId: pub.userId || pub.ownerId || null,
+                userEmail: pub.userEmail || null,
+                userPhoneNumber: pub.userPhoneNumber || null,
                 status: pub.status || 'ACTIVE', // ACTIVE, INACTIVE, REPORTED
                 isReported: pub.isReported || false,
                 reportCount: pub.reportCount || 0,

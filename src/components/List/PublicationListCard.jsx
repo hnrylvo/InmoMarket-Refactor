@@ -1,3 +1,4 @@
+import { useState } from "react"
 import Image from "next/image"
 import { Heart, MapPin, Maximize2, BedDouble, Bath, Car } from "lucide-react"
 
@@ -5,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserInfoDialog } from "@/components/UserInfoDialog"
 
 export default function PublicationListCard({
   imageUrl = "/placeholder.svg?height=400&width=600",
@@ -17,8 +19,12 @@ export default function PublicationListCard({
   parking = 1,
   publisherName = "Jane Cooper",
   publisherImageUrl = "/placeholder.svg?height=40&width=40",
+  publisherId = null,
+  userEmail = null,
+  userPhoneNumber = null,
   isFeatured = false,
 }) {
+  const [dialogOpen, setDialogOpen] = useState(false);
   return (
     <Card className="overflow-hidden transition-all hover:shadow-md">
       <div className="relative">
@@ -84,7 +90,15 @@ export default function PublicationListCard({
             <AvatarFallback>{publisherName.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="text-sm">
-            <p className="leading-none">{publisherName}</p>
+            <p 
+              className="leading-none cursor-pointer hover:text-primary transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDialogOpen(true);
+              }}
+            >
+              {publisherName}
+            </p>
             <p className="text-xs text-muted-foreground">Property Agent</p>
           </div>
         </div>
@@ -92,6 +106,14 @@ export default function PublicationListCard({
           View Details
         </Button>
       </CardFooter>
+      <UserInfoDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        publisherId={publisherId}
+        publisherName={publisherName}
+        userEmail={userEmail}
+        userPhoneNumber={userPhoneNumber}
+      />
     </Card>
   )
 }

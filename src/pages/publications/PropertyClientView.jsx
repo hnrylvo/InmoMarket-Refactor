@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { ReportDialog } from "@/components/ReportDialog";
 import { FavoriteButton } from "@/components/ui/favoriteButton";
 import { VisitSchedulingDialog } from "@/components/VisitSchedulingDialog";
+import { UserInfoDialog } from "@/components/UserInfoDialog";
 
 export default function PropertyClientView() {
   const { id } = useParams();
@@ -142,6 +143,21 @@ export default function PropertyClientView() {
   const [tourExpanded, setTourExpanded] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const [mapExpanded, setMapExpanded] = useState(false);
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
+
+  const handleUserClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('handleUserClick called, opening dialog', property?.publisherId);
+    setUserDialogOpen(true);
+  };
+
+  // Debug: verificar cuando cambia el estado del diálogo
+  useEffect(() => {
+    if (userDialogOpen) {
+      console.log('Dialog should be open now');
+    }
+  }, [userDialogOpen]);
 
   const formatPrice = (price) => {
     if (!price) return 'Precio no disponible';
@@ -495,15 +511,17 @@ export default function PropertyClientView() {
             <p className="text-gray-700 dark:text-gray-200">{property.description || 'Sin descripción disponible'}</p>
             <p className="text-sm text-muted-foreground">
               Publicado por{' '}
-              {property.publisherId ? (
-                <Link 
-                  to={`/user/${property.publisherId}`}
-                  className="text-primary hover:underline font-medium"
+              {property?.publisherName ? (
+                <button
+                  type="button"
+                  onClick={handleUserClick}
+                  className="text-primary hover:underline font-medium cursor-pointer bg-transparent border-none p-0 m-0 inline"
+                  style={{ cursor: 'pointer' }}
                 >
-                  {property.publisherName || 'Anónimo'}
-                </Link>
+                  {property.publisherName}
+                </button>
               ) : (
-                <span>{property.publisherName || 'Anónimo'}</span>
+                <span>Anónimo</span>
               )}
             </p>
           </div>
@@ -581,6 +599,15 @@ export default function PropertyClientView() {
           </div>
         </div>
       </div>
+      {property && (
+        <UserInfoDialog
+          open={userDialogOpen}
+          onOpenChange={setUserDialogOpen}
+          publisherName={property.publisherName}
+          userEmail={property.userEmail}
+          userPhoneNumber={property.userPhoneNumber}
+        />
+      )}
     </div>
   );
 }

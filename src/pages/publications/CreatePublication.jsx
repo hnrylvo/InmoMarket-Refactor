@@ -405,6 +405,7 @@ export default function CreatePublication() {
             if (!token) {
                 console.error('No token found in auth store')
                 toast.error('Error: No se encontró el token de autenticación')
+                setIsSubmitting(false)
                 return
             }
 
@@ -468,29 +469,61 @@ export default function CreatePublication() {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'multipart/form-data'
+                    },
+                    validateStatus: function (status) {
+                        // Consider status codes less than 500 as success
+                        // This handles cases where the API returns 201, 200, or even 400 with a success message
+                        return status < 500
                     }
                 }
             )
 
-            console.log('API Success Response:', response.data)
-            toast.success('Publicación creada exitosamente')
-            navigate('/publications')
+            // Check if the response indicates success
+            if (response.status >= 200 && response.status < 300) {
+                console.log('API Success Response:', response.data)
+                toast.success('Publicación creada exitosamente')
+                navigate('/publications')
+            } else {
+                // Handle non-2xx responses that didn't throw an error
+                const errorMessage = response.data?.message || response.data?.error || 'Error al crear la publicación'
+                console.error('API Error Response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: response.data
+                })
+                toast.error(errorMessage)
+                setIsSubmitting(false)
+            }
         } catch (error) {
             console.error('Error completo:', error)
+            
+            // Check if it's a network error or API error
             if (error.response) {
+                // API responded with error status
+                const errorMessage = error.response.data?.message || 
+                                   error.response.data?.error || 
+                                   `Error ${error.response.status}: ${error.response.statusText}`
                 console.error('API Error Response:', {
                     status: error.response.status,
                     statusText: error.response.statusText,
-                    headers: error.response.headers,
                     data: error.response.data
                 })
+                toast.error(errorMessage)
+            } else if (error.request) {
+                // Request was made but no response received
+                console.error('Network Error:', error.request)
+                toast.error('Error de conexión. Por favor verifica tu conexión a internet.')
+            } else {
+                // Something else happened
+                console.error('Error:', error.message)
+                toast.error(error.message || 'Error al crear la publicación')
             }
+            
             console.error('Form Data:', {
                 ...formData,
                 files: formData.files ? formData.files.length : 0,
                 timeSlots
             })
-            toast.error('Error al crear la publicación')
         } finally {
             setIsSubmitting(false)
         }

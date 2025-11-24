@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { BedDouble, MapPin, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge.jsx";
 import { FavoriteButton } from "@/components/ui/favoriteButton";
@@ -5,6 +6,7 @@ import { Link } from "react-router-dom";
 import { ReportDialog } from "@/components/ReportDialog";
 import { Card } from "@/components/ui/card";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { UserInfoDialog } from "@/components/UserInfoDialog";
 
 export default function ExpandedPropertyCard(props) {
   const {
@@ -18,11 +20,15 @@ export default function ExpandedPropertyCard(props) {
     parking = 1,
     publisherName = "Jane Cooper",
     publisherId = null,
+    userEmail = null,
+    userPhoneNumber = null,
     isNew = false,
     favorited = false,
     onFavoriteChange,
     isPending = false,
   } = props;
+
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { userId } = useAuthStore();
   const isOwnPublication = userId && publisherId && userId === publisherId;
@@ -126,18 +132,29 @@ export default function ExpandedPropertyCard(props) {
             </div>
           </div>
           {publisherId ? (
-            <Link 
-              to={`/user/${publisherId}`}
-              className="text-sm text-gray-600 dark:text-gray-300 font-medium hover:text-primary transition-colors"
-              onClick={(e) => e.stopPropagation()}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDialogOpen(true);
+              }}
+              className="text-sm text-gray-600 dark:text-gray-300 font-medium hover:text-primary transition-colors cursor-pointer"
             >
               {publisherName}
-            </Link>
+            </button>
           ) : (
             <div className="text-sm text-gray-600 dark:text-gray-300 font-medium">{publisherName}</div>
           )}
         </div>
       </div>
+      <UserInfoDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        publisherId={publisherId}
+        publisherName={publisherName}
+        userEmail={userEmail}
+        userPhoneNumber={userPhoneNumber}
+      />
     </Card>
   );
 }
